@@ -12,7 +12,15 @@ let config = {
   request: {
     delay: 200
   },
-  storPath: "./maps/google",
+  storPath: "./maps/",
+  db: {
+    openTime: 15,
+    checkForError: true,
+    onlyCheck: false
+  },
+  network: {
+    state: "enable"
+  },
   dbTimeOpen: 15,
   checkDBForError: true,
   onlyDBCheck: false,
@@ -20,6 +28,32 @@ let config = {
   tor: {
     host: '10.200.33.97',
     port: 8080
+  },
+  log: {
+    DB: {
+      info: false,
+      error: true
+    },
+    MAP: {
+      info: true,
+      error: true
+    },
+    SQLITE3: {
+      info: false,
+      error: true
+    },
+    HTTP: {
+      info: true,
+      error: true
+    },
+    GPS: {
+      info: true,
+      error: true
+    },
+    MAIN: {
+      info: true,
+      error: true
+    }
   }
 };
 

@@ -19,23 +19,24 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, { /* options */ });
 //------------------------------------------------------------------------------
-//Color console
+//Logging service
 //------------------------------------------------------------------------------
-let colors = require('colors');
+let log = require('./log.js');
+const Log = new log();
 //------------------------------------------------------------------------------
-//GooleSatMap
+//Some vars for service
 //------------------------------------------------------------------------------
-const MAP = require("./map");
-let googleMap = new MAP();
 //Глобальный список тайлов для загрузки
 let arrTilesList = [];
 //Глобальный список статусов запущеных потоков
 let threadRunList = [];
+//Глобальный список карт
+let arrMaps = {};
 //----------------------------------------------------------------------------------------------------------------------
 //Открытие порта для входящих соединений
 //----------------------------------------------------------------------------------------------------------------------
 httpServer.listen(config.service.port);
-console.log(colors.green("Start service on port"), colors.green.bold(config.service.port));
+Log.make("info", "MAIN", "Start service on port " + config.service.port);
 //----------------------------------------------------------------------------------------------------------------------
 //Выдача статичных файлов для карты
 //----------------------------------------------------------------------------------------------------------------------
@@ -48,39 +49,71 @@ app.get(["/tile", "/cesium/tile"], async function(request, responce){
   let parseReq = url.parse(request.url, true);
   //Получаем данный для загрузки тайлов
   let q = parseReq.query;
-  //Добавляем тайл в список загрузки
-  arrTilesList.push({
-    x: parseInt(q.x),
-    y: parseInt(q.y),
-    z: parseInt(q.z),
-    responce: responce
-  });
-  //Запускаем потоки загрузки
-  threadsStarter();
+  //Переводим все значения в числовые
+  q.z = parseInt(q.z);
+  q.x = parseInt(q.x);
+  q.x = parseInt(q.x);
+  //Устанавливаем максимальное значение координат тайла
+  let maxTileNumber = 1;
+  //Изменяем максимальный номер тайла в соответсвии с уровнем увеличения
+  for(let i = 1; i <= parseInt(q.z); i++) {
+    maxTileNumber = maxTileNumber * 4;
+  }
+  maxTileNumber--;
+  //Если координата тайла превышает максимально возможное значение
+  if(q.x > maxTileNumber || q.y > maxTileNumber) {
+    Log.make("error", "MAIN", "Tile coord error: x " + q.x + " > " + maxTileNumber + "or y " + q.y + " > " + maxTileNumber);
+    //Пишем пустой тайл
+    response.writeHead(200, { "Content-Length": 0 });
+    response.end('');
+  }
+  else {
+    //Добавляем тайл в список загрузки
+    arrTilesList.push({
+      map: q.map,
+      x: q.x,
+      y: q.y,
+      z: q.z,
+      responce: responce
+    });
+    //Запускаем потоки загрузки
+    threadsStarter();
+  }
 });
 //------------------------------------------------------------------------------
 //Функция, которая запускает потоки загрузки тайлов
 //------------------------------------------------------------------------------
 async function threadsStarter() {
-  //Проходимся по списку потоков загрузки
-  for(let i = 1; i <= config.service.threads; i++) {
-    //Если поток никогда не был запущен
-    if(typeof threadRunList[i] === "undefined") {
-      //Запускаем поток
-      tilesService(i);
+  //If we have tiles in list for download
+  if(arrTilesList.length > 0) {
+    //Get tiles counter
+    let threadCounter = arrTilesList.length;
+    //If tiles counter more then threads enabled
+    if(threadCounter > config.service.threads) {
+      //Set threads counter to max enabled threads
+      threadCounter = config.service.threads;
     }
-    //Если поток остановлен
-    else if(threadRunList[i] == false) {
-      //Запускаем поток
-      tilesService(i);
+    //Start loop
+    for(let i = 1; i <= threadCounter; i++) {
+      //If thread never run
+      if(typeof threadRunList[i] === "undefined") {
+        //Start thread
+        tilesService(i);
+      }
+      //If thread is stopped
+      else if(threadRunList[i] == false) {
+        //Start thread
+        tilesService(i);
+      }
     }
   }
+
 }
 //------------------------------------------------------------------------------
 //Функция потока загрузки тайлов
 //------------------------------------------------------------------------------
 async function tilesService(threadNumber) {
-  console.log(("Thread " + threadNumber + " was started.").blue);
+  Log.make("info", "MAIN", "Thread " + threadNumber + " was started.");
   //Устанавливаем что поток запущен
   threadRunList[threadNumber] = true;
   //Переменная для хранения информации о загружаемом тайле
@@ -89,6 +122,8 @@ async function tilesService(threadNumber) {
   let response = '';
   //Переменная для хранения изображения тайла
   let tile = '';
+  //Переменная для хранения обьекта карты
+  let map = '';
   //Пока поток запущен
   while(threadRunList[threadNumber]) {
     //Если список тайлов не пуст
@@ -97,13 +132,23 @@ async function tilesService(threadNumber) {
       jobInfo = arrTilesList[0];
       //Удаляем тайл из списка
       arrTilesList.shift();
+      //Проверяем есть ли обьект карты в списке
+      if(typeof arrMaps[jobInfo.map] !== "undefined") {
+        //сохраняем обьект карты в переменную
+        map = arrMaps[jobInfo.map];
+      }
+      //Если обькта карты нет
+      else {
+        map = require("./" + jobInfo.map + ".js");
+        map = new map();
+        arrMaps[jobInfo.map] = map;
+      }
       //Получаем тайл из базы или интернета
-      tile = await googleMap.getTile(jobInfo.z, jobInfo.x, jobInfo.y);
+      tile = await map.getTile(jobInfo.z, jobInfo.x, jobInfo.y);
       //If tile was asked by leaflet map
       if(jobInfo.responce) {
         //Получаем ссылку на ресурс ответа
         responce = jobInfo.responce;
-        //console.log(tile);
         //Если удалось получить тайл
         if (tile) {
           //Пишем изображение в ответ
@@ -124,7 +169,7 @@ async function tilesService(threadNumber) {
       threadRunList[threadNumber] = false;
     }
   }
-  console.log(("Thread " + threadNumber + " was stoped.").blue);
+  Log.make("info", "MAIN", "Thread " + threadNumber + " was stoped.");
 }
 
 //------------------------------------------------------------------------------
@@ -138,7 +183,7 @@ io.on("jobOrder", (jobConfig) => {
 });
 
 io.on('connection', function(socket){
-  console.log('a user connected');
+  Log.make("info", "MAIN", "User connected by socket.io");
   socket.on("stat", () => {
     socket.emit("stat", statistic);
   });
@@ -150,7 +195,7 @@ io.on('connection', function(socket){
     socket.emit("logHistory", logList);
   });
   socket.on('disconnect', function(){
-    console.log('user disconnected');
+    Log.make("info", "MAIN", "User disconnected by socket.io");
   });
 });
 
@@ -171,7 +216,7 @@ let tileList = function(selectedX, selectedY, selectedZoom, requiredZoom) {
       });
     }
   }
-  console.log(arrTilesList.length);
+  Log.make("info", "MAIN", "Added new job. Tile Count: " + arrTilesList.length);
   threadsStarter();
   //return listTiles;
 };
