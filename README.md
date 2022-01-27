@@ -5,6 +5,10 @@ Google Sat Map Downloader
 Once you view map, it will store all tiles in DB forever.
 
 ```
+git clone https://github.com/gunyakov/maptorium.git
+
+cd maptorium
+
 npm install
 
 npm start
