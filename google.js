@@ -1,30 +1,23 @@
 //------------------------------------------------------------------------------
-//Logging service
-//------------------------------------------------------------------------------
-let log = require('./log.js');
-const Log = new log();
-//------------------------------------------------------------------------------
-//Main map handler
+//General map handler
 //------------------------------------------------------------------------------
 let map = require("./map.js");
 //------------------------------------------------------------------------------
-//HTTP engine based on Axios
+//Exstention to hande Google Sat Map
 //------------------------------------------------------------------------------
-let httpEngine = require("./http-engine.js");
-
 class Google extends map {
 
   constructor() {
     super();
 
-    this.mapVersion = 0;
+    this._mapVersion = 0;
     this.storage = __dirname + '/maps/google';
   }
 
   async getTile(z, x, y) {
     await this.getMapVersion();
     let tileUrl = await this.getURL(z, x, y);
-    Log.make("info", "HTTP", tileUrl);
+    this._log.make("info", "HTTP", tileUrl);
     let tile = await this.getTileMain(z, x, y, this.storage, tileUrl);
     if(tile) {
       return tile;
@@ -51,8 +44,8 @@ class Google extends map {
       //let request = await this.getHTTPAgent();
       let url = 'https://maps.googleapis.com/maps/api/js';
       //request.encoding = "utf-8";
-      let responce = await httpEngine.get(url).catch((error) => {
-        Log.make("error", "HTTP", error);
+      let responce = await this._httpEngine.get(url).catch((error) => {
+        this._log.make("error", "HTTP", error);
       });
       //response = response.body;
       //console.log(response);
@@ -66,7 +59,7 @@ class Google extends map {
             return this.mapVersion = 917;
           }
         }
-        Log.make("info", "HTTP", "Google map version: " + this.mapVersion);
+        this._log.make("info", "HTTP", "Google map version: " + this.mapVersion);
         return this.mapVersion;
       }
       else {

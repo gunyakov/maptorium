@@ -4,6 +4,10 @@
 //------------------------------------------------------------------------------
 let config = require('./config');
 //------------------------------------------------------------------------------
+//Statistics
+//------------------------------------------------------------------------------
+let stat = require('./statistics');
+//------------------------------------------------------------------------------
 //Wait функция
 //------------------------------------------------------------------------------
 let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -69,7 +73,7 @@ app.get(["/tile", "/cesium/tile"], async function(request, responce){
   }
   else {
     //Добавляем тайл в список загрузки
-    arrTilesList.push({
+    arrTilesList.unshift({
       map: q.map,
       x: q.x,
       y: q.y,
@@ -162,6 +166,8 @@ async function tilesService(threadNumber) {
           responce.end('');
         }
       }
+      stat.queue = arrTilesList.length;
+      io.emit("stat", stat);
     }
     //Если список тайлов пуст
     else {
@@ -185,21 +191,38 @@ io.on("jobOrder", (jobConfig) => {
 io.on('connection', function(socket){
   Log.make("info", "MAIN", "User connected by socket.io");
   socket.on("stat", () => {
-    socket.emit("stat", statistic);
+    socket.emit("stat", stat);
   });
+  //----------------------------------------------------------------------------
+  //New job order request
+  //----------------------------------------------------------------------------
   socket.on("jobOrder", (jobConfig) => {
     jobList.push(jobConfig);
     tileList(jobConfig.x, jobConfig.y, jobConfig.zoom, jobConfig.requiredZoom);
   });
-  socket.on("logHistory", () =>{
-    socket.emit("logHistory", logList);
+  //----------------------------------------------------------------------------
+  //Network state change request
+  //----------------------------------------------------------------------------
+  socket.on("setNetworkState", (data) => {
+    switch(data) {
+      case "force":
+      case "disable":
+        config.network.state = data;
+        break;
+      default:
+        config.network.state = "enable";
+        break;
+    }
   });
-  socket.on('disconnect', function(){
+  socket.on("logHistory", () =>{
+    socket.emit("logHistory", Log.get());
+  });
+  socket.on('disconnect', function() {
     Log.make("info", "MAIN", "User disconnected by socket.io");
   });
 });
 
-let tileList = function(selectedX, selectedY, selectedZoom, requiredZoom) {
+let tileList = function(selectedX, selectedY, selectedZoom, requiredZoom, map = "google") {
   let startX = selectedX * Math.pow(2, requiredZoom - selectedZoom);
   let startY = selectedY * Math.pow(2, requiredZoom - selectedZoom);
   let stopX = startX + Math.pow(2, requiredZoom - selectedZoom);
@@ -212,7 +235,8 @@ let tileList = function(selectedX, selectedY, selectedZoom, requiredZoom) {
         x: parseInt(x),
         y: parseInt(y),
         z: parseInt(requiredZoom),
-        responce: false
+        responce: false,
+        map: map
       });
     }
   }

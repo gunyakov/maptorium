@@ -65,7 +65,7 @@ class DB {
       //Проверяем есть ли файл базы данных
       if(!fs.existsSync(dbName)) {
         //Создаем файл базы
-        dbState = await sqlite3.open(dbName).catch((error) => { });
+        dbState = await sqlite3.open(dbName).catch((error) => {Log.make("error", "DB", error) });
         if(dbState) {
           await sqlite3.run(dbName, "CREATE TABLE t (x INTEGER NOT NULL,y INTEGER NOT NULL,v INTEGER DEFAULT 0 NOT NULL,c TEXT,s INTEGER DEFAULT 0 NOT NULL,h INTEGER DEFAULT 0 NOT NULL,d INTEGER NOT NULL,b BLOB,constraint PK_TB primary key (x,y,v));").catch((error) => { Log.make("error", "DB", error) });
           //Создаем индекс в таблице
@@ -119,7 +119,7 @@ class DB {
       //Формируем запрос к базе данных
       let sql = "SELECT s, b FROM t WHERE x = ? AND y = ?;";
       //Получаем ответ из базы
-      let results = await sqlite3.all(dbName, sql, [x, y]).catch((error) => {  });
+      let results = await sqlite3.all(dbName, sql, [x, y]).catch((error) => {Log.make("error", "DB", error)  });
       //console.log(results);
       //Если запрос вернул результат
       if(typeof results !== "undefined") {
@@ -159,7 +159,7 @@ class DB {
       //Получаем время запроса
       let timeStamp = await this.time();
       //Заносим изображение в базу
-      let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]).catch((error) => { });
+      let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]).catch((error) => {Log.make("error", "DB", error) });
       //Если запрос вернул результат
       if(typeof results !== "undefined") {
         Log.make("info", "DB", "insert -> " + dbName);
@@ -190,7 +190,7 @@ class DB {
       //Получаем время запроса
       let timeStamp = await this.time();
       //Заносим изображение в базу
-      //let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]).catch((error) => { });
+      let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]).catch((error) => { });
       //Если запрос вернул результат
       if(typeof results !== "undefined") {
         Log.make("info", "DB", "update -> " + dbName);
@@ -216,8 +216,8 @@ class DB {
         dbTimeOpen = Math.floor(Date.now() / 1000) - value.time;
         //console.log("DB " + this.arrDB[key]['name'] + " time: " + dbTimeOpen);
         //console.log(this.arrDB);
-        if(dbTimeOpen > config.dbTimeOpen && this.arrDB[key]['state'] == "open") {
-          await sqlite3.close(value.name).catch((error) => { });
+        if(dbTimeOpen > config.db.OpenTime && this.arrDB[key]['state'] == "open") {
+          await sqlite3.close(value.name).catch((error) => { Log.make("error", "DB", error) });
           this.arrDB[key]['state'] = "closed";
           this.dbOpened--;
         }

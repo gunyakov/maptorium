@@ -12,24 +12,25 @@ let config = {
   request: {
     delay: 200
   },
-  storPath: "./maps/",
   db: {
-    openTime: 15,
-    checkForError: true,
-    onlyCheck: false
+    //Prevent write in DB any tiles in any mode
+    ReadOnly: false,
+    //Idle time to close DB file if idle
+    OpenTime: 15
   },
   network: {
     state: "enable"
   },
-  dbTimeOpen: 15,
-  checkDBForError: true,
-  onlyDBCheck: false,
-  logLength: 20,
   tor: {
     host: '10.200.33.97',
     port: 8080
   },
+  //----------------------------------------------------------------------------
+  //Log service
+  //----------------------------------------------------------------------------
   log: {
+    //How many entries keep in logs
+    length: 20,
     DB: {
       info: false,
       error: true

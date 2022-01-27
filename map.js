@@ -1,14 +1,28 @@
-const config = require("./config.js");
+//------------------------------------------------------------------------------
+//Config
+//------------------------------------------------------------------------------
+let config = require('./config');
+//------------------------------------------------------------------------------
+//Config
+//------------------------------------------------------------------------------
 const DB = require("./db.js");
-let Log = require('./log.js');
-Log = new Log();
 const db = new DB();
-const httpEngine = require("./http-engine.js");
-
+//------------------------------------------------------------------------------
+//Log
+//------------------------------------------------------------------------------
+let Log = require('./log.js');
+//------------------------------------------------------------------------------
+//Statistics
+//------------------------------------------------------------------------------
+let stat = require('./statistics');
+//------------------------------------------------------------------------------
+//General map handler
+//------------------------------------------------------------------------------
 class Map {
 
   constructor(){
-    this.mapVersion = 0;
+    this._httpEngine = require("./http-engine.js");
+    this._log = new Log();
   }
   //----------------------------------------------------------------------------
   //Основная логика для работы с тайлами
@@ -31,11 +45,11 @@ class Map {
         //Если тайла нет в базе и разрешено загружать с сети
         else {
           //Получаем тайл из сети
-          tile = await httpEngine.get(url, "arraybuffer").catch((error) => { Log.make("error", "MAP", error) });
+          tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
           //Если был получен ответ с сервера
           if(typeof tile !== "undefined") {
             //Если разрешено писать в базу
-            if(config.dbReadOnly === false) {
+            if(config.db.ReadOnly === false) {
               //Сохраняем тайл в базе
               await db.saveTile(z, x, y, this.storage, tile.data, parseInt(tile.headers['content-length']), this.mapVersion);
             }
@@ -44,10 +58,13 @@ class Map {
               b: tile.data,
               s: parseInt(tile.headers['content-length'])
             }
+            stat.tiles.download++;
+            stat.tiles.size += tile.s;
             return tile;
           }
           else {
-            Log.make("error", "MAP", url);
+            this._log.make("error", "MAP", url);
+            stat.tiles.error++;
             return false;
           }
         }
@@ -74,29 +91,28 @@ class Map {
       //------------------------------------------------------------------------
       case "force":
         //Получаем тайл из сети
-        tile = await httpEngine.get(url, "arraybuffer").catch((error) => { /*console.log(error)*/ });
+        tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
         //Если тайл есть в базе
         if(typeof tile !== "undefined") {
           //Если разрешено писать в базу
-          if(config.dbReadOnly === false) {
+          if(config.db.ReadOnly === false) {
             await db.updateTile(z, x, y, this.storage, tile.data, parseInt(tile.headers['content-length']), this.mapVersion);
           }
           tile = {
             b: tile.data,
             s: parseInt(tile.headers['content-length'])
           }
+          stat.tiles.download++;
+          stat.tiles.size += tile.s;
           return tile;
         }
         else {
+          this._log.make("error", "MAP", url);
+          stat.tiles.error++;
           return false;
         }
         break;
     }
-  }
-
-  async getRandomInt (max) {
-    let arrLetter = [a, b, c];
-    return arrLetter[Math.floor(Math.random() * Math.floor(arrLetter.length - 1))];
   }
 }
 

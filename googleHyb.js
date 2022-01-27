@@ -1,5 +1,10 @@
+//------------------------------------------------------------------------------
+//General map handler
+//------------------------------------------------------------------------------
 let map = require("./map.js");
-
+//------------------------------------------------------------------------------
+//Exstention to hande Google Hybrid Map
+//------------------------------------------------------------------------------
 class GoogleHybrid extends map {
 
   constructor() {
@@ -27,7 +32,7 @@ class GoogleHybrid extends map {
     //url += await this.getRandomInt(4);
     //httpReq += '2';
     //httpReq += '.google.com/kh/src=app&v=';
-    url += '.google.com/vt/lyrs=h@169000000&hl=ru&';
+    url += '.google.com/vt/lyrs=h@169000000&hl=gb&';
     //httpReq += mapVersion;
     url += "zoom=" + z + "&x=" + x + "&y=" + y + "&s=Gali";
     return url;

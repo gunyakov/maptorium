@@ -23,18 +23,18 @@ exports.get = function(url, responseType = 'text') {
         port: config.proxy.port
       }
     }
-    if(config.networkState != "disable") {
+    if(config.network.state != "disable") {
       axios(axiosConfig).then(function (response) {
         Log.make("info", "HTTP", axiosConfig.url);
         resolve(response);
       }).catch(function (error) {
         //Log.make("error", "HTTP", error);
-        reject(false);
+        resolve(false);
       });
     }
     else {
       Log.make("error", "HTTP", "Network disabled " + axiosConfig.url);
-      reject(false);
+      resolve(false);
     }
 
   });

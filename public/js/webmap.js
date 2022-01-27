@@ -21,6 +21,9 @@ $(".dropdown-item").on("click", function(e) {
 		case "selectionDropdownMenuLink":
 			selectMode = $(this).attr("data");
 			break;
+		case "viewDropdownMenuLink":
+			
+			break;
 		default:
 		 alert("Function in progress.");
 		 break;
@@ -42,7 +45,11 @@ L.tileLayer('tile?map=googleHyb&z={z}&x={x}&y={y}', {
 	zoomOffset: 0
 }).addTo(map);
 
-L.control.mousePosition().addTo(map);
+var controlBar = L.control.bar('bar',{
+	position: 'bottom',
+	visible: true
+});
+map.addControl(controlBar);
 
 var TileGrid = L.tilegrid({
 	zoomOffset: -1,
@@ -57,10 +64,6 @@ function setTileGrid(zoom, zoomOffset) {
 let latlng = L.latLng(-90, 180);
 //console.log(latlng);
 
-$("#viewGrid").on("click", function(e) {
-	e.preventDefault();
-	gridNew.decreaseGridSize();
-});
 let jobConfig = {
 	x: 0,
 	y: 0,
@@ -125,6 +128,27 @@ map.on('click', function(e) {
 		});
 	}
 });
+map.on("mousemove", function(e) {
+	$("#mCoords").html("Lat: " + e.latlng.lat + " Lng: " + e.latlng.lng);
+});
+map.on("zoomend", function(e) {
+	$("#mZ").html("Z" + map.getZoom());
+});
+
+socket.emit("stat", "");
+socket.on("stat", (data) => {
+	$("#mQue").html("&nbsp;Queue: " + data.queue);
+	$("#mDownload").html("&nbsp;Download " + data.tiles.download + " (" + formatFileSize(data.tiles.size, 2) + ")");
+});
+
+function formatFileSize(bytes,decimalPoint) {
+   if(bytes == 0) return '0 Bytes';
+   var k = 1000,
+       dm = decimalPoint || 2,
+       sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+       i = Math.floor(Math.log(bytes) / Math.log(k));
+   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
 
 $("#startJob").on("click", function(e) {
 	$("#jobModal").modal('hide');
