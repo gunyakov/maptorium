@@ -5,12 +5,13 @@ let config = {
     port: 9000,
     //Threads for http request
     threads: 4,
-    //Use tor or not
-    tor: false
   },
   //Request for mass tile download
   request: {
-    delay: 200
+    delay: 200,
+    //Milliseconds
+    timeout: 30000,
+    userAgent: 'Mozilla/5.0 (X11; Linux x86_64; rv:96.0) Gecko/20100101 Firefox/96.0'
   },
   db: {
     //Prevent write in DB any tiles in any mode
@@ -19,11 +20,28 @@ let config = {
     OpenTime: 15
   },
   network: {
+    //(enable, disable, force)
     state: "enable"
   },
-  tor: {
-    host: '10.200.33.97',
-    port: 8080
+  proxy: {
+    //Use proxy or not (true or false)
+    enable: true,
+    //Enable tor change ID
+    tor: true,
+    //Type of proxy(socks, socks4, socks5, http, https)
+    protocol: "http",
+    //Host can be IP or domain
+    host: '127.0.0.1',
+    //Port
+    port: 8999,
+    auth: {
+      username: '',
+      password: '',
+      tor: {
+        HashedControlPassword: "16:872860B76453A77D60CA2BB8C1A7042072093276A3D701AD684053EC4C",
+        ControlPort: 9051
+      }
+    }
   },
   //----------------------------------------------------------------------------
   //Log service
@@ -33,27 +51,33 @@ let config = {
     length: 20,
     DB: {
       info: false,
-      error: true
+      error: true,
+      warning: true
     },
     MAP: {
       info: true,
-      error: true
+      error: true,
+      warning: true
     },
     SQLITE3: {
       info: false,
-      error: true
+      error: true,
+      warning: true
     },
     HTTP: {
-      info: true,
-      error: true
+      info: false,
+      error: true,
+      warning: true
     },
     GPS: {
       info: true,
-      error: true
+      error: true,
+      warning: true
     },
     MAIN: {
       info: true,
-      error: true
+      error: true,
+      warning: true
     }
   }
 };

@@ -15,6 +15,7 @@ npm start
 ```
 After navigate in browser to http://localhost:9000
 
-Very early version 0.0.1. Under heavy development
+Very early version 0.5.0. Under heavy development
 
-0.0.1 - Core service, Mass tiles downloading by selecting tile and zoom level.
+28.01.2022 - TOR service, SOCKS/HTTP Proxy request, Check IP during loading.
+0.5.0 - Core service, Mass tiles downloading by selecting tile and zoom level.

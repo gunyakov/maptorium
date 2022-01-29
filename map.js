@@ -3,7 +3,7 @@
 //------------------------------------------------------------------------------
 let config = require('./config');
 //------------------------------------------------------------------------------
-//Config
+//DB handler
 //------------------------------------------------------------------------------
 const DB = require("./db.js");
 const db = new DB();
@@ -21,94 +21,117 @@ let stat = require('./statistics');
 class Map {
 
   constructor(){
+    this.storage = __dirname;
+    this._mapVersion = 0;
     this._httpEngine = require("./http-engine.js");
     this._log = new Log();
   }
   //----------------------------------------------------------------------------
-  //Основная логика для работы с тайлами
+  //Return info of Map
+  //----------------------------------------------------------------------------
+  async getInfo() {
+    return this._info;
+  }
+  //----------------------------------------------------------------------------
+  //Main tile handler
   //----------------------------------------------------------------------------
   async getTileMain(z, x, y, storage, url) {
+    //Reset tile info
     let tile = "";
-    //Переключаем режимы работы
+    //Switch of network state
     switch (config.network.state) {
       //------------------------------------------------------------------------
-      //Режим кеш и сеть (по умолчанию)
+      //Internet & Cache mode
       //------------------------------------------------------------------------
       case "enable":
-        //Попытка получить тайл из базы
+        //Try to get tile from DB
         tile = await db.getTile(z, x, y, storage);
-        //Если тайл есть в базе
+        //If tile is present in DB
         if(tile) {
-          //Возвращаем тайл из базы
+          //Return tile
           return tile;
         }
-        //Если тайла нет в базе и разрешено загружать с сети
+        //If tile is missing in DB
         else {
-          //Получаем тайл из сети
+          //Try to get tile from server
           tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
-          //Если был получен ответ с сервера
-          if(typeof tile !== "undefined") {
-            //Если разрешено писать в базу
+          //If received tile from server or 404 code
+          if(tile) {
+            //If enable to write into DB
             if(config.db.ReadOnly === false) {
-              //Сохраняем тайл в базе
-              await db.saveTile(z, x, y, this.storage, tile.data, parseInt(tile.headers['content-length']), this.mapVersion);
+              //Insert tile into DB
+              await db.saveTile(z, x, y, this.storage, tile.data, tile.data.byteLength, this._mapVersion);
             }
-            //Возвращаем тайл
+            //Format tile info
             tile = {
               b: tile.data,
-              s: parseInt(tile.headers['content-length'])
+              s: tile.data.byteLength
             }
+            //Make stat
             stat.tiles.download++;
             stat.tiles.size += tile.s;
+            //Return tile
             return tile;
           }
+          //If tile missing on server
           else {
+            //Show error message
             this._log.make("error", "MAP", url);
+            //Make stat
             stat.tiles.error++;
+            //Return false
             return false;
           }
         }
         break;
       //------------------------------------------------------------------------
-      //Режим только кеш
+      //Cache mode
       //------------------------------------------------------------------------
       case "disable":
-        //Попытка получить тайл из базы
+        //Try to get tile from DB
         tile = await db.getTile(z, x, y, storage);
-        //Если тайл есть в базе
+        //If tile is present in DB
         if(tile) {
-          //Возвращаем тайл из базы
+          //Return tile
           return tile;
         }
-        //Если тайла нет в базе
+        //If tile is missing in DB
         else {
-          //Возвращаем ошибку
+          //Return false
           return false;
         }
         break;
       //------------------------------------------------------------------------
-      //Режим только интернет
+      //Internet mode
       //------------------------------------------------------------------------
       case "force":
-        //Получаем тайл из сети
+        //Try to get tile from server
         tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
-        //Если тайл есть в базе
-        if(typeof tile !== "undefined") {
-          //Если разрешено писать в базу
+        //If received tile from server
+        if(tile) {
+          //If enable to write into DB
           if(config.db.ReadOnly === false) {
-            await db.updateTile(z, x, y, this.storage, tile.data, parseInt(tile.headers['content-length']), this.mapVersion);
+            //Insert or update tile in DB
+            await db.updateTile(z, x, y, this.storage, tile.data, tile.data.byteLength, this._mapVersion);
           }
+          //Format tile info
           tile = {
             b: tile.data,
-            s: parseInt(tile.headers['content-length'])
+            s: tile.data.byteLength
           }
+          //Make stat
           stat.tiles.download++;
           stat.tiles.size += tile.s;
+          //Return tile
           return tile;
         }
+        //If tile missing on server
         else {
+          //Show error message
           this._log.make("error", "MAP", url);
+          //Make stat
           stat.tiles.error++;
+          //Return false
           return false;
         }
         break;

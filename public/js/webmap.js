@@ -1,20 +1,11 @@
-$(document).ready(function(){
-	$("#map").height($(window).height() - $("#navbar").height());
-});
 
-$( window ).resize(function() {
-	$("#map").height($(window).height() - $("#navbar").height());
-});
 let socket = io();
-//$( window ).resize(function() {
-	//$("#map").height($(document).height() - $("#navbar").height());
-	//$("#map").width($(document).width() - 100);
-//});
-//$("#navbar").width($(document).width());
+//------------------------------------------------------------------------------
+//Set height of map container
+//------------------------------------------------------------------------------
 $("#map").height($(document).height() - $("#navbar").height());
 
 let selectMode = false;
-
 $(".dropdown-item").on("click", function(e) {
 	console.log($(this).parents("ul").attr("aria-labelledby"));
 	switch ($(this).parents("ul").attr("aria-labelledby")) {
@@ -22,7 +13,12 @@ $(".dropdown-item").on("click", function(e) {
 			selectMode = $(this).attr("data");
 			break;
 		case "viewDropdownMenuLink":
-			
+			break;
+		case "layersDropdownMenuLink":
+			console.log($(this).attr("href"));
+			break;
+		case "mapsDropdownMenuLink":
+			console.log($(this).attr("href"));
 			break;
 		default:
 		 alert("Function in progress.");
@@ -31,19 +27,6 @@ $(".dropdown-item").on("click", function(e) {
 });
 
 let map = L.map('map').setView([51.505, -0.09], 4);
-L.tileLayer('tile?map=google&z={z}&x={x}&y={y}', {
-	maxZoom: 18,
-	attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
-		'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-	tileSize: 256,
-	zoomOffset: 0
-}).addTo(map);
-L.tileLayer('tile?map=googleHyb&z={z}&x={x}&y={y}', {
-	maxZoom: 18,
-	attribution: '',
-	tileSize: 256,
-	zoomOffset: 0
-}).addTo(map);
 
 var controlBar = L.control.bar('bar',{
 	position: 'bottom',
@@ -134,8 +117,62 @@ map.on("mousemove", function(e) {
 map.on("zoomend", function(e) {
 	$("#mZ").html("Z" + map.getZoom());
 });
-
-socket.emit("stat", "");
+//------------------------------------------------------------------------------
+//Response maps list from server
+//------------------------------------------------------------------------------
+let arrMapsList = {};
+let arrLayersList = {};
+let currentMap = false;
+let currentLayer = false;
+socket.on("setMapList", (data) => {
+	for(i = 0; i < data.length; i++) {
+		let mapInfo = data[i];
+		let tileLayer = L.tileLayer(`tile?map=${mapInfo.id}&z={z}&x={x}&y={y}`, {
+			maxZoom: 18,
+			attribution: mapInfo.attribution,
+			tileSize: mapInfo.tileSize,
+			zoomOffset: 0
+		});
+		$("#jobMap").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`)
+		if(mapInfo.type == "map") {
+			$("#mapsList").append(`<li><a class="dropdown-item" href="#${mapInfo.id}" onclick="changeMap('${mapInfo.id}')">${mapInfo.name}</a></li>`);
+			arrMapsList[mapInfo.id] = tileLayer;
+			if(!currentMap) {
+				currentMap = tileLayer;
+				currentMap.addTo(map);
+			}
+		}
+		if(mapInfo.type == "layer") {
+			$("#layersList").append(`<li><a class="dropdown-item" href="#" onclick="addLayer('${mapInfo.id}')">${mapInfo.name}</a></li>`);
+			arrLayersList[mapInfo.id] = tileLayer;
+			if(!currentLayer) {
+				currentLayer = tileLayer;
+				currentLayer.addTo(map);
+			}
+		}
+	}
+});
+function changeMap(mapID) {
+	currentMap.remove();
+	currentMap = arrMapsList[mapID];
+	currentMap.addTo(map);
+	currentMap.bringToBack();
+}
+function hideAllLayers() {
+	for (const layer in arrLayersList) {
+		arrLayersList[layer].remove();
+	}
+}
+function addLayer(mapID) {
+	arrLayersList[mapID].addTo(map);
+	arrLayersList[mapID].bringToFront();
+}
+//------------------------------------------------------------------------------
+//Request for maps list on server
+//------------------------------------------------------------------------------
+socket.on("connect", () => {
+	socket.emit("getMapList", "");
+});
 socket.on("stat", (data) => {
 	$("#mQue").html("&nbsp;Queue: " + data.queue);
 	$("#mDownload").html("&nbsp;Download " + data.tiles.download + " (" + formatFileSize(data.tiles.size, 2) + ")");
@@ -153,5 +190,6 @@ function formatFileSize(bytes,decimalPoint) {
 $("#startJob").on("click", function(e) {
 	$("#jobModal").modal('hide');
 	jobConfig.requiredZoom = $("#jobZoomLevel option:selected").val();
+	jobConfig.map = $("#jobMap option:selected").val();
 	socket.emit("jobOrder", jobConfig);
 });

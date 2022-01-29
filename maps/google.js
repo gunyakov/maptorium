@@ -1,17 +1,24 @@
 //------------------------------------------------------------------------------
 //General map handler
 //------------------------------------------------------------------------------
-let map = require("./map.js");
+let map = require("../map.js");
 //------------------------------------------------------------------------------
 //Exstention to hande Google Sat Map
 //------------------------------------------------------------------------------
-class Google extends map {
+class ExtMap extends map {
 
   constructor() {
     super();
 
-    this._mapVersion = 0;
-    this.storage = __dirname + '/maps/google';
+    this.storage += '/storage/google';
+    this._info = {
+      id: "googlesat",
+      type: "map",
+      name: "Google Satellite",
+      submenu: "Google",
+      tileSize: 256,
+      attribution: ""
+    };
   }
 
   async getTile(z, x, y) {
@@ -28,13 +35,8 @@ class Google extends map {
   }
 
   async getURL(z, x, y) {
-    let url = 'https://mt';
-    url += await this.getRandomInt(4);
-    //httpReq += '2';
-    //httpReq += '.google.com/kh/src=app&v=';
-    url += '.google.com/vt/lyrs=s&hl=en&v=';
-    url += this.mapVersion;
-    url += "&z=" + z + "&x=" + x + "&y=" + y;
+    let rnd = await this.getRandomInt(4);
+    let url = `https://mt${rnd}.google.com/vt/lyrs=s&hl=en&v=${this.mapVersion}&z=${z}&x=${x}&y=${y}`;
     return url;
   }
 
@@ -75,4 +77,4 @@ class Google extends map {
   }
 }
 
-module.exports = Google;
+module.exports = ExtMap;

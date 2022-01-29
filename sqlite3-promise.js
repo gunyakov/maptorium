@@ -1,5 +1,4 @@
 const sqlite3 = require('sqlite3').verbose();
-let Promise = require("bluebird");
 const md5 = require('md5');
 let log = require('./log.js');
 let Log = new log();
@@ -59,8 +58,8 @@ SQLite3Promise.prototype.run = function(dbName, query, params = []) {
     arrDBSQLITE3[dbNameHash].run(query, params,
         function(err)  {
           if(err) {
-            Log.make("error", "SQLITE3", err.message + " " + dbName);
-            reject(false);
+            Log.make("error", "SQLITE3", err + " " + dbName);
+            resolve(false);
           }
           else {
             Log.make("info", "SQLITE3", "run() " + dbName);

@@ -1,17 +1,24 @@
 //------------------------------------------------------------------------------
 //General map handler
 //------------------------------------------------------------------------------
-let map = require("./map.js");
+let map = require("../map.js");
 //------------------------------------------------------------------------------
 //Exstention to hande Google Hybrid Map
 //------------------------------------------------------------------------------
-class GoogleHybrid extends map {
+class ExtMap extends map {
 
   constructor() {
     super();
 
-    this.mapVersion = 0;
-    this.storage = __dirname + '/maps/Both';
+    this.storage += '/storage/Both';
+    this._info = {
+      id: "googlehyb",
+      type: "layer",
+      name: "Google Hybrid",
+      submenu: "Google",
+      tileSize: 256,
+      attribution: ""
+    };
   }
 
   async getTile(z, x, y) {
@@ -27,13 +34,8 @@ class GoogleHybrid extends map {
 
   async getURL(z, x, y) {
     z = 18 - z - 1;
-    //http://mt0.google.com/vt/lyrs=h@169000000&hl=ru&x=1&y=0&zoom=16&s=Galil
     let url = 'http://mt';
-    //url += await this.getRandomInt(4);
-    //httpReq += '2';
-    //httpReq += '.google.com/kh/src=app&v=';
     url += '.google.com/vt/lyrs=h@169000000&hl=gb&';
-    //httpReq += mapVersion;
     url += "zoom=" + z + "&x=" + x + "&y=" + y + "&s=Gali";
     return url;
   }
@@ -43,4 +45,4 @@ class GoogleHybrid extends map {
   }
 }
 
-module.exports = GoogleHybrid;
+module.exports = ExtMap;

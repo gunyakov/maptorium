@@ -122,18 +122,16 @@
               <a class="nav-link dropdown-toggle" href="#" id="mapsDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Maps
               </a>
-              <ul class="dropdown-menu" aria-labelledby="mapsDropdownMenuLink">
-                <li><a class="dropdown-item" href="#">Google</a></li>
-                <li><a class="dropdown-item" href="#">Yandex</a></li>
-                <li><a class="dropdown-item" href="#">Other</a></li>
+              <ul class="dropdown-menu" aria-labelledby="mapsDropdownMenuLink" id="mapsList">
+
               </ul>
             </li>
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" href="#" id="layersDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Layers
               </a>
-              <ul class="dropdown-menu" aria-labelledby="layersDropdownMenuLink">
-                <li><a class="dropdown-item" href="#">Hide All</a></li>
+              <ul class="dropdown-menu" aria-labelledby="layersDropdownMenuLink" id="layersList">
+                <li><a class="dropdown-item" href="#" onclick="hideAllLayers()">Hide All</a></li>
                 <li><hr class="dropdown-divider"></li>
               </ul>
             </li>
@@ -148,6 +146,9 @@
               </ul>
             </li>
           </ul>
+          <button class="btn float-end ms-auto" data-bs-toggle="offcanvas" data-bs-target="#offcanvas" role="button">
+            <span class="navbar-toggler-icon"></span>
+          </button>
         </div>
       </div>
     </nav>
@@ -160,9 +161,58 @@
   <a class="dropdown-item" href="#">Another action</a>
   <a class="dropdown-item" href="#">Something else here</a>
 </div>
-<table id="bar"><tr><td id="mZ" style="width:18px">Z0</td><td id="mQue" width="80px">&nbsp;Queue: 0&nbsp;</td><td id="mDownload" width="160px">&nbsp;Downloaded 0 (0,0kB) </td><td id='mCoords'>Coords will be there</td></tr></table>
-  <!--Modal for Download job-->
-  <div class="modal fade" id="jobModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<table id="bar"><tr><td id="mZ" style="width:18px">N/A</td><td id="mQue" width="100px">&nbsp;Queue: 0&nbsp;</td><td id="mDownload" width="180px">&nbsp;Downloaded 0 (0,0kB) </td><td id='mCoords'>Coords will be there</td></tr></table>
+<!--sidebar-->
+<div class="offcanvas offcanvas-end w-25" tabindex="-1" id="offcanvas" data-bs-keyboard="false" data-bs-backdrop="false" style="z-index: 1200;">
+  <div class="offcanvas-header">
+      <h6 class="offcanvas-title d-none d-sm-block" id="offcanvas">Service pane</h6>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body px-0">
+    <div class="accordion" id="accordionExample">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingOne">
+      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+        Download Jobs
+      </button>
+    </h2>
+    <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        <strong>This is the first item's accordion body.</strong> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+      </div>
+    </div>
+  </div>
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingTwo">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+        Error Log
+      </button>
+    </h2>
+    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        <p>Somenew text</p>
+        <p>Some new text 2</p>
+        <strong>This is the second item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+      </div>
+    </div>
+  </div>
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingThree">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+        Info Log
+      </button>
+    </h2>
+    <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+      <div class="accordion-body">
+        <strong>This is the third item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+<!--Modal for Download job-->
+<div class="modal fade" id="jobModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -170,18 +220,31 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <select class="form-select" aria-label="Default select example" id="jobZoomLevel">
-          <option selected value="0">Select Z level for downloading</option>
-          <option value="10">Z10</option>
-          <option value="11">Z11</option>
-          <option value="12">Z12</option>
-          <option value="13">Z13</option>
-          <option value="14">Z14</option>
-          <option value="15">Z15</option>
-          <option value="16">Z16</option>
-          <option value="17">Z17</option>
-          <option value="18">Z18</option>
-        </select>
+        <form>
+          <div class="mb-3">
+            <label for="recipient-name" class="col-form-label">Map:</label>
+            <select class="form-select" aria-label="Default select example" id="jobMap">
+              <option selected value="0">Select map</option>
+              
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="message-text" class="col-form-label">Zomm level for download:</label>
+            <select class="form-select" aria-label="Default select example" id="jobZoomLevel">
+              <option selected value="0">Select Z level for downloading</option>
+              <option value="10">Z10</option>
+              <option value="11">Z11</option>
+              <option value="12">Z12</option>
+              <option value="13">Z13</option>
+              <option value="14">Z14</option>
+              <option value="15">Z15</option>
+              <option value="16">Z16</option>
+              <option value="17">Z17</option>
+              <option value="18">Z18</option>
+            </select>
+          </div>
+        </form>
+
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

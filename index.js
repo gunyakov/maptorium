@@ -30,25 +30,22 @@ const Log = new log();
 //------------------------------------------------------------------------------
 //Some vars for service
 //------------------------------------------------------------------------------
-//Глобальный список тайлов для загрузки
+//Global list of tiles required by GET
 let arrTilesList = [];
-//Глобальный список статусов запущеных потоков
+//Global list of tiles required by download jobs
+let arrJobTilesList = [];
+//Global list of threads state
 let threadRunList = [];
-//Глобальный список карт
+//Global list of maps (now not yet used)
 let arrMaps = {};
 //----------------------------------------------------------------------------------------------------------------------
-//Открытие порта для входящих соединений
-//----------------------------------------------------------------------------------------------------------------------
-httpServer.listen(config.service.port);
-Log.make("info", "MAIN", "Start service on port " + config.service.port);
-//----------------------------------------------------------------------------------------------------------------------
-//Выдача статичных файлов для карты
+//Static files for browser map
 //----------------------------------------------------------------------------------------------------------------------
 app.use(express.static(path.join(__dirname, 'public')));
 //----------------------------------------------------------------------------------------------------------------------
-//Обработка запросов на тайлы
+//GET request for tiles
 //----------------------------------------------------------------------------------------------------------------------
-app.get(["/tile", "/cesium/tile"], async function(request, responce){
+app.get(["/tile", "/cesium/tile"], async function(request, response){
   //Получаем данные из запроса
   let parseReq = url.parse(request.url, true);
   //Получаем данный для загрузки тайлов
@@ -61,12 +58,18 @@ app.get(["/tile", "/cesium/tile"], async function(request, responce){
   let maxTileNumber = 1;
   //Изменяем максимальный номер тайла в соответсвии с уровнем увеличения
   for(let i = 1; i <= parseInt(q.z); i++) {
-    maxTileNumber = maxTileNumber * 4;
+    maxTileNumber = maxTileNumber * 2;
   }
   maxTileNumber--;
   //Если координата тайла превышает максимально возможное значение
   if(q.x > maxTileNumber || q.y > maxTileNumber) {
-    Log.make("error", "MAIN", "Tile coord error: x " + q.x + " > " + maxTileNumber + "or y " + q.y + " > " + maxTileNumber);
+    Log.make("error", "MAIN", "Tile request. Tile coords is out of max limit");
+    //Пишем пустой тайл
+    response.writeHead(200, { "Content-Length": 0 });
+    response.end('');
+  }
+  else if(typeof q.map == "undefined") {
+    Log.make("error", "MAIN", "Tile request. Map don't set");
     //Пишем пустой тайл
     response.writeHead(200, { "Content-Length": 0 });
     response.end('');
@@ -78,7 +81,7 @@ app.get(["/tile", "/cesium/tile"], async function(request, responce){
       x: q.x,
       y: q.y,
       z: q.z,
-      responce: responce
+      response: response
     });
     //Запускаем потоки загрузки
     threadsStarter();
@@ -88,11 +91,19 @@ app.get(["/tile", "/cesium/tile"], async function(request, responce){
 //Функция, которая запускает потоки загрузки тайлов
 //------------------------------------------------------------------------------
 async function threadsStarter() {
-  //If we have tiles in list for download
-  if(arrTilesList.length > 0) {
-    //Get tiles counter
-    let threadCounter = arrTilesList.length;
-    //If tiles counter more then threads enabled
+  //If we have tiles in list for GET or in list for Job
+  if(arrTilesList.length > 0 || arrJobTilesList.length > 0) {
+    //Reset thread counter
+    let threadCounter = 0;
+    //If we have tiles on job list
+    if(arrJobTilesList.length > 0) {
+      threadCounter = arrJobTilesList.length;
+    }
+    //If size of request tiles in job list les than request tiles in GET
+    if(arrTilesList.length > threadCounter) {
+      threadCounter = arrTilesList.length;
+    }
+    //If threads counter more then threads enabled
     if(threadCounter > config.service.threads) {
       //Set threads counter to max enabled threads
       threadCounter = config.service.threads;
@@ -111,7 +122,6 @@ async function threadsStarter() {
       }
     }
   }
-
 }
 //------------------------------------------------------------------------------
 //Функция потока загрузки тайлов
@@ -120,85 +130,111 @@ async function tilesService(threadNumber) {
   Log.make("info", "MAIN", "Thread " + threadNumber + " was started.");
   //Устанавливаем что поток запущен
   threadRunList[threadNumber] = true;
-  //Переменная для хранения информации о загружаемом тайле
-  let jobInfo = {};
-  //Переменная для хранения ссылки на ресурс ответа
-  let response = '';
-  //Переменная для хранения изображения тайла
-  let tile = '';
-  //Переменная для хранения обьекта карты
-  let map = '';
   //Пока поток запущен
   while(threadRunList[threadNumber]) {
-    //Если список тайлов не пуст
-    if(arrTilesList.length > 0) {
-      //Берем первый тайл из списка
-      jobInfo = arrTilesList[0];
-      //Удаляем тайл из списка
-      arrTilesList.shift();
-      //Проверяем есть ли обьект карты в списке
-      if(typeof arrMaps[jobInfo.map] !== "undefined") {
-        //сохраняем обьект карты в переменную
-        map = arrMaps[jobInfo.map];
+    //If any list of tiles isn`t empty
+    if(arrTilesList.length > 0 || arrJobTilesList.length > 0) {
+      //Reset tile info
+      let jobTile = false;
+      //Reset map handler
+      let map = '';
+      //Reset tile result
+      let tile = '';
+      //If we have tiles in GET list
+      if(arrTilesList.length > 0) {
+        //Take first tile and delete it
+        jobTile = arrTilesList.shift();
       }
-      //Если обькта карты нет
-      else {
-        map = require("./" + jobInfo.map + ".js");
-        map = new map();
-        arrMaps[jobInfo.map] = map;
+      //If GET list empty but job list isn`t
+      else if(arrJobTilesList.length > 0) {
+        //Take first tile and delete it
+        jobTile = arrJobTilesList.shift();
       }
-      //Получаем тайл из базы или интернета
-      tile = await map.getTile(jobInfo.z, jobInfo.x, jobInfo.y);
-      //If tile was asked by leaflet map
-      if(jobInfo.responce) {
-        //Получаем ссылку на ресурс ответа
-        responce = jobInfo.responce;
-        //Если удалось получить тайл
-        if (tile) {
-          //Пишем изображение в ответ
-          responce.writeHead(200, {'Content-Type': 'image/jpg', "Content-Length": tile.s});
-          responce.end(tile.b);
+      //if get tile info before
+      if(jobTile) {
+        //Get response
+        let response = jobTile.response;
+        //Chech if we already init requred map handler
+        if(typeof arrMaps[jobTile.map] !== "undefined") {
+          //If have conected map handler just get it
+          map = arrMaps[jobTile.map];
+          //Handle tile download logick
+          tile = await map.getTile(jobTile.z, jobTile.x, jobTile.y);
+          //If tile was asked by leaflet map
+          if(jobTile.response) {
+            //If tile handled
+            if (tile) {
+              //Return tile to response
+              response.writeHead(200, {'Content-Type': 'image/*', "Content-Length": tile.s});
+              response.end(tile.b);
+            }
+            //If tile didn`t handle or some error in tile downloading
+            else {
+              //Return empty response
+              response.writeHead(440, {'Content-Type': 'image/*', "Content-Length": 0});
+              response.end('');
+            }
+          }
+          //Make stat
+          stat.queue = arrTilesList.length + arrJobTilesList.length;
+          //Send stat to UI
+          io.emit("stat", stat);
         }
-        //Если не удалось получить тайл
+        //If haven`t connect map handler
         else {
-          //Пишем пустой тайл
-          responce.writeHead(440, {'Content-Type': 'image/jpg', "Content-Length": 0});
-          responce.end('');
+          Log.make("warning", "MAIN", `Can't find ${jobTile.map} map handler on server. Skip request.`);
+          //Return empty response
+          response.writeHead(440, {'Content-Type': 'image/*', "Content-Length": 0});
+          response.end('');
         }
       }
-      stat.queue = arrTilesList.length;
-      io.emit("stat", stat);
     }
-    //Если список тайлов пуст
+    //If any list of tiles is empty
     else {
-      //Выходим из потока
+      //Exit from thread
       threadRunList[threadNumber] = false;
     }
   }
+  //Show exit thread message
   Log.make("info", "MAIN", "Thread " + threadNumber + " was stoped.");
 }
-
 //------------------------------------------------------------------------------
 //Socket comunication with client
 //------------------------------------------------------------------------------
-let jobList = [];
-
-io.on("jobOrder", (jobConfig) => {
-  jobList.push(jobConfig);
-  tileList(jobConfig.x, jobConfig.y, jobConfig.zoom, jobConfig.requiredZoom);
-});
-
 io.on('connection', function(socket){
   Log.make("info", "MAIN", "User connected by socket.io");
   socket.on("stat", () => {
     socket.emit("stat", stat);
   });
+  //--------------------------------------------------------------------------
+  //Create maps list
+  //--------------------------------------------------------------------------
+  socket.on("getMapList", async () => {
+    const fs = require('fs');
+    //Reset map info array
+    let arrMapInfo = [];
+    //Get list of files
+    let mapsList = fs.readdirSync("./maps");
+    //Walk files list
+    for(i = 0; i < mapsList.length; i++) {
+      //Require module of map handler
+      let map = require("./maps/" + mapsList[i]);
+      //Init map handler
+      map = new map();
+      let mapInfo = await map.getInfo();
+      //Save map handler for future use
+      arrMaps[mapInfo.id] = map;
+      //Push info of map into array
+      arrMapInfo.push(mapInfo);
+    }
+    socket.emit("setMapList", arrMapInfo);
+  });
   //----------------------------------------------------------------------------
   //New job order request
   //----------------------------------------------------------------------------
   socket.on("jobOrder", (jobConfig) => {
-    jobList.push(jobConfig);
-    tileList(jobConfig.x, jobConfig.y, jobConfig.zoom, jobConfig.requiredZoom);
+    //Push job order to list
+    arrJobList.push(jobConfig);
   });
   //----------------------------------------------------------------------------
   //Network state change request
@@ -221,8 +257,13 @@ io.on('connection', function(socket){
     Log.make("info", "MAIN", "User disconnected by socket.io");
   });
 });
-
-let tileList = function(selectedX, selectedY, selectedZoom, requiredZoom, map = "google") {
+//------------------------------------------------------------------------------
+//Job List handler
+//------------------------------------------------------------------------------
+//Init job list
+let arrJobList = [];
+//Generate tiles list for job list
+let tileList = async function(selectedX, selectedY, selectedZoom, requiredZoom, map = "google") {
   let startX = selectedX * Math.pow(2, requiredZoom - selectedZoom);
   let startY = selectedY * Math.pow(2, requiredZoom - selectedZoom);
   let stopX = startX + Math.pow(2, requiredZoom - selectedZoom);
@@ -231,16 +272,41 @@ let tileList = function(selectedX, selectedY, selectedZoom, requiredZoom, map = 
   for(let x = startX; x < stopX; x++) {
     for(let y = startY; y < stopY; y++) {
       //Добавляем в список координаты тайлов
-      arrTilesList.push({
+      arrJobTilesList.push({
         x: parseInt(x),
         y: parseInt(y),
         z: parseInt(requiredZoom),
-        responce: false,
+        response: false,
         map: map
       });
     }
   }
-  Log.make("info", "MAIN", "Added new job. Tile Count: " + arrTilesList.length);
+  Log.make("info", "MAIN", "Job started. Tile Count: " + arrJobTilesList.length);
   threadsStarter();
-  //return listTiles;
 };
+//------------------------------------------------------------------------------
+//Init
+//------------------------------------------------------------------------------
+(async() => {
+  //----------------------------------------------------------------------------
+  //Check proxy settings during start
+  //----------------------------------------------------------------------------
+  let httpEngine = require("./http-engine");
+  await httpEngine.checkProxy();
+  //----------------------------------------------------------------------------
+  //Open port for incoming requests
+  //----------------------------------------------------------------------------
+  await httpServer.listen(config.service.port);
+  Log.make("info", "MAIN", "Start service on port " + config.service.port);
+  while(true) {
+    //Whait second
+    await wait(1000);
+    //If job tile list empty and job list isnt
+    if(arrJobTilesList.length == 0 && arrJobList.length > 0) {
+      //Take first job and delete it
+      let jobConfig = arrJobList.shift();
+      //Create tile list for job and start threads
+      await tileList(jobConfig.x, jobConfig.y, jobConfig.zoom, jobConfig.requiredZoom, jobConfig.map);
+    }
+  }
+})();

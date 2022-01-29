@@ -9,7 +9,7 @@ sqlite3 = new sqlite3();
 let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 //------------------------------------------------------------------------------
-//Движок для работы с базами данных
+//DB handler based on sqlite3 promise version
 //------------------------------------------------------------------------------
 class DB {
 
@@ -161,15 +161,16 @@ class DB {
       //Заносим изображение в базу
       let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]).catch((error) => {Log.make("error", "DB", error) });
       //Если запрос вернул результат
-      if(typeof results !== "undefined") {
-        Log.make("info", "DB", "insert -> " + dbName);
+      if(results) {
+        Log.make("info", "DB", "INSERT -> " + dbName);
         return results;
       }
       //Если запрос вернул пустой результат, значит база была закрыта
       else {
-        Log.make("error", "DB", "insert -> " + dbName);
+        Log.make("error", "DB", "INSERT -> " + dbName);
         //Устанавливаем что базу нужно открыть в принудительном порядке
         force = true;
+        return false;
       }
     }
   }
@@ -189,17 +190,18 @@ class DB {
       let objDB = await this.getDB(z, x, y, storage, force);
       //Получаем время запроса
       let timeStamp = await this.time();
+      await sqlite3.run(dbName, "DELETE FROM t WHERE x = ? AND y = ?;", [x, y]).catch((error) => { Log.make("error", "DB", "192" + error) });
       //Заносим изображение в базу
-      let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]).catch((error) => { });
+      let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]).catch((error) => { Log.make("error", "DB", "194" + error) });
       //Если запрос вернул результат
       if(typeof results !== "undefined") {
-        Log.make("info", "DB", "update -> " + dbName);
+        Log.make("info", "DB", "UPDATE -> " + dbName);
         return results;
       }
       //Если запрос вернул пустой результат, значит база была закрыта
       else {
         //Выводим сообщение
-        Log.make("error", "DB", "update -> " + dbName);
+        Log.make("error", "DB", "UPDATE -> " + dbName);
         //Устанавливаем что базу нужно открыть в принудительном порядке
         force = true;
       }
@@ -214,8 +216,6 @@ class DB {
     while(true) {
       for (let [key, value] of Object.entries(this.arrDB)) {
         dbTimeOpen = Math.floor(Date.now() / 1000) - value.time;
-        //console.log("DB " + this.arrDB[key]['name'] + " time: " + dbTimeOpen);
-        //console.log(this.arrDB);
         if(dbTimeOpen > config.db.OpenTime && this.arrDB[key]['state'] == "open") {
           await sqlite3.close(value.name).catch((error) => { Log.make("error", "DB", error) });
           this.arrDB[key]['state'] = "closed";

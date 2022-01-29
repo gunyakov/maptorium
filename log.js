@@ -13,12 +13,13 @@ class Log {
   constructor() {
     this.arrLog = {
       'info': [],
-      'error': []
+      'error': [],
+      'warning': []
     }
   }
 
   async make(type, module,  message) {
-    if(type != "info" && type != "error") {
+    if(type != "info" && type != "error" && type != "warning") {
       type = "info";
     }
     //If entries counter more than set in config
@@ -37,6 +38,10 @@ class Log {
       //Show error message
       if(type == "error") {
         console.log(colors.red(new Date().toLocaleString("en-GB")), colors.red.bold(type.toUpperCase()), colors.red.bold(module.toUpperCase()), colors.red(message));
+      }
+      //Show error message
+      if(type == "warning") {
+        console.log(colors.yellow(new Date().toLocaleString("en-GB")), colors.yellow.bold(type.toUpperCase()), colors.yellow.bold(module.toUpperCase()), colors.yellow(message));
       }
     }
   }
