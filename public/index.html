@@ -1,266 +1,378 @@
 <!doctype html>
 <html lang="en">
+
+
+<!-- Mirrored from themesbrand.com/minia/layouts/layouts-horizontal.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 30 Jan 2022 09:07:08 GMT -->
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Maptorium</title>
-  <meta charset="utf-8">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin="" />
-  <link href="css/leaflet.contextmenu.min.css" rel="stylesheet">
-  <link href="css/L.Control.Bar.css" rel="stylesheet">
-  <style>
 
+        <meta charset="utf-8" />
+        <title>Maptorium</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta content="Premium Multipurpose Admin & Dashboard Template" name="description" />
+        <meta content="Themesbrand" name="author" />
+        <!-- App favicon -->
+        <link rel="shortcut icon" href="assets/images/favicon.ico">
 
-    .dropdown-menu li {
-      position: relative;
-    }
-    .dropdown-menu .dropdown-submenu {
-      display: none;
-      position: absolute;
-      left: 100%;
-      top: -7px;
-    }
-    .dropdown-menu .dropdown-submenu-left {
-      right: 100%;
-      left: auto;
-    }
-    .dropdown-menu > li:hover > .dropdown-submenu {
-      display: block;
-    }
-  </style>
-</head>
-<body>
-  <div class="row" id="navbar">
-    <nav class="navbar navbar-expand-lg navbar-light">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="#">
-          <img src="https://getbootstrap.com/docs/5.1/assets/brand/bootstrap-logo.svg" alt="" width="30" height="24" class="d-inline-block align-text-top">
-          Maptorium
-        </a>
-        <div class="collapse navbar-collapse" id="navbarNavDropdown">
-          <ul class="navbar-nav">
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="viewDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                View
-              </a>
-              <ul class="dropdown-menu" aria-labelledby="viewDropdownMenuLink">
-                <li>
-                  <a class="dropdown-item" href="#">Tile boundaries</a>
-                  <ul class="dropdown-menu dropdown-submenu p-4 text-muted" style="max-width: 400px;">
-                    <li><a class="dropdown-item" href="#" onclick="setTileGrid(-1, -1)">Hide</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li>
-                      <a class="dropdown-item" href="#">Zoom</a>
-                      <ul class="dropdown-menu dropdown-submenu p-4 text-muted" style="max-width: 400px; width: 340px;">
-                        <li>
-                          <h6 class="dropdown-header">Zoom Level</h6>
-                        </li>
-                        <li>
-                          <hr class="dropdown-divider">
-                        </li>
-                        <p>
-                          <button type="button" class="btn btn-outline-secondary" data-toggle="button" aria-pressed="true" onclick="setTileGrid(1, -1)">Z01</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(2, -1)">Z02</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(3, -1)">Z03</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(4, -1)">Z04</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(5, -1)">Z05</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(6, -1)">Z06</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(7, -1)">Z07</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(8, -1)">Z08</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(9, -1)">Z09</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(10, -1)">Z10</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(11, -1)">Z11</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(12, -1)">Z12</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(13, -1)">Z13</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(14, -1)">Z14</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(15, -1)">Z15</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(16, -1)">Z16</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(17, -1)">Z17</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(18, -1)">Z18</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(19, -1)">Z19</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(20, -1)">Z20</button>
-                        </p>
-                      </ul>
-                    </li>
-                    <li>
-                      <a class="dropdown-item" href="#">Zoom Offset</a>
-                      <ul class="dropdown-menu dropdown-submenu p-4 text-muted" style="max-width: 400px; width: 340px;">
-                        <li>
-                          <h6 class="dropdown-header">Zoom Offset Level</h6>
-                        </li>
-                        <li>
-                          <hr class="dropdown-divider">
-                        </li>
-                        <p>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 0)">0</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 1)">+1</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 2)">+2</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 3)">+3</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 4)">+4</button>
-                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 5)">+5</button>
-                        </p>
-                      </ul>
-                    </li>
-                  </ul>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="#">Tile cached map</a>
-                </li>
-              </ul>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="sourceDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Source
-              </a>
-              <ul class="dropdown-menu" aria-labelledby="sourceDropdownMenuLink">
-                <li><a class="dropdown-item" href="#" onclick='socket.emit("setNetworkState", "force");'>Internet</a></li>
-                <li><a class="dropdown-item" href="#" onclick='socket.emit("setNetworkState", "enable");'>Internet & Cache</a></li>
-                <li><a class="dropdown-item" href="#" onclick='socket.emit("setNetworkState", "disable");'>Cache</a></li>
-              </ul>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="mapsDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Maps
-              </a>
-              <ul class="dropdown-menu" aria-labelledby="mapsDropdownMenuLink" id="mapsList">
+        <!-- leaflet Css -->
+        <link href="assets/libs/leaflet/leaflet.css" rel="stylesheet" type="text/css" />
 
-              </ul>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="layersDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Layers
-              </a>
-              <ul class="dropdown-menu" aria-labelledby="layersDropdownMenuLink" id="layersList">
-                <li><a class="dropdown-item" href="#" onclick="hideAllLayers()">Hide All</a></li>
-                <li><hr class="dropdown-divider"></li>
-              </ul>
-            </li>
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" href="#" id="selectionDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                Selection
-              </a>
-              <ul class="dropdown-menu" aria-labelledby="selectionDropdownMenuLink">
-                <li><a class="dropdown-item" href="#" data="tile">By tile grid</a></li>
-                <li><a class="dropdown-item" href="#" data="rectangular">Rectangular</a></li>
-                <li><a class="dropdown-item" href="#" data="coordinates">By Coordinates</a></li>
-              </ul>
-            </li>
-          </ul>
-          <button class="btn float-end ms-auto" data-bs-toggle="offcanvas" data-bs-target="#offcanvas" role="button">
-            <span class="navbar-toggler-icon"></span>
-          </button>
+        <!-- preloader css -->
+        <link rel="stylesheet" href="assets/css/preloader.min.css" type="text/css" />
+
+        <!-- Bootstrap Css -->
+        <link href="assets/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css" />
+        <!-- Icons Css -->
+        <link href="assets/css/icons.min.css" rel="stylesheet" type="text/css" />
+        <!-- App Css-->
+        <link href="assets/css/app.min.css" id="app-style" rel="stylesheet" type="text/css" />
+        <!-- Status bar for Leaflet Css-->
+        <link href="assets/libs/leaflet/L.Control.Bar.css" rel="stylesheet">
+        <style>
+
+                #chart {
+              padding: 0;
+              max-width: 300px;
+              margin: 0px auto;
+            }
+
+            </style>
+
+    </head>
+
+    <body data-layout="horizontal">
+
+        <!-- Begin page -->
+        <div id="layout-wrapper">
+
+            <div class="topnav">
+                <div class="container-fluid">
+                    <nav class="navbar navbar-light navbar-expand-lg topnav-menu">
+
+                        <div class="collapse navbar-collapse" id="topnav-menu-content">
+                          <div class="navbar-brand-box">
+                              <a href="index.html" class="logo logo-dark">
+                                  <span class="logo-sm">
+                                      <img src="assets/images/logo-sm.svg" alt="" height="24">
+                                  </span>
+                                  <span class="logo-lg">
+                                      <img src="assets/images/logo-sm.svg" alt="" height="24"> <span class="logo-txt">Maptorium</span>
+                                  </span>
+                              </a>
+
+                              <a href="index.html" class="logo logo-light">
+                                  <span class="logo-sm">
+                                      <img src="assets/images/logo-sm.svg" alt="" height="24">
+                                  </span>
+                                  <span class="logo-lg">
+                                      <img src="assets/images/logo-sm.svg" alt="" height="24"> <span class="logo-txt">Maptorium</span>
+                                  </span>
+                              </a>
+                          </div>
+                          <div class="dropdown d-none d-lg-inline-block ms-1">
+                              <button type="button" class="btn header-item"
+                              data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                  <i data-feather="grid" class="icon-lg"></i>
+                              </button>
+                              <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end">
+                                  <div class="p-2" id="maps-list">
+
+                                  </div>
+                              </div>
+                          </div>
+                          <div class="dropdown d-none d-lg-inline-block ms-1">
+                              <button type="button" class="btn header-item"
+                              data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                  <i data-feather="layers" class="icon-lg"></i>
+                              </button>
+                              <div class="dropdown-menu" aria-labelledby="topnav-form" id="layers-list">
+                                <li><a class="dropdown-item" href="#" data-key="t-layers-hide-all">Hide All</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                              </div>
+                          </div>
+                            <ul class="navbar-nav">
+                              <li class="nav-item dropdown">
+                                  <a class="nav-link dropdown-toggle arrow-none" href="#" role="button">
+                                      Selection<div class="arrow-down"></div>
+                                  </a>
+                                  <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#" data-key="t-select-tile">By tile grid</a></li>
+                                    <li><a class="dropdown-item" href="#" data-key="t-select-rectangular">Rectangular</a></li>
+                                    <li><a class="dropdown-item" href="#" data-key="t-select-coordinates">By Coordinates</a></li>
+                                  </ul>
+                              </li>
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle arrow-none" href="#" id="topnav-pages" role="button">
+                                        <span data-key="t-apps">View</span> <div class="arrow-down"></div>
+                                    </a>
+                                    <div class="dropdown-menu" aria-labelledby="topnav-pages">
+
+                                        <div class="dropdown">
+                                            <a class="dropdown-item dropdown-toggle arrow-none" href="#" id="topnav-tile-boundaries"
+                                                role="button">
+                                                <span data-key="t-tile-boundaries">Tile Boundaries</span> <div class="arrow-down"></div>
+                                            </a>
+                                            <div class="dropdown-menu mega-dropdown-menu px-2 dropdown-mega-menu-lg" aria-labelledby="topnav-tile-boundaries">
+                                                <div class="ps-2 p-lg-6">
+                                                    <div class="row">
+                                                        <div class="col-lg-8">
+                                                            <div>
+                                                                <div class="menu-title">Zoom</div>
+                                                                <div class="row g-0">
+                                                                    <div class="col-lg-12">
+                                                                        <div>
+                                                                          <button type="button" class="btn btn-outline-secondary" data-toggle="button" aria-pressed="true" onclick="setTileGrid(1, -1)">Z01</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(2, -1)">Z02</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(3, -1)">Z03</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(4, -1)">Z04</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(5, -1)">Z05</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(6, -1)">Z06</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(7, -1)">Z07</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(8, -1)">Z08</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(9, -1)">Z09</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(10, -1)">Z10</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(11, -1)">Z11</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(12, -1)">Z12</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(13, -1)">Z13</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(14, -1)">Z14</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(15, -1)">Z15</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(16, -1)">Z16</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(17, -1)">Z17</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(18, -1)">Z18</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(19, -1)">Z19</button>
+                                                                          <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(20, -1)">Z20</button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="col-lg-4">
+                                                            <div>
+                                                                <div class="menu-title">Zoom Offset</div>
+                                                                <div>
+                                                                  <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 0)">&nbsp;0</button>
+                                                                  <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 1)">+1</button>
+                                                                  <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 2)">+2</button>
+                                                                  <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 3)">+3</button>
+                                                                  <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 4)">+4</button>
+                                                                  <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 5)">+5</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="dropdown">
+                                            <a class="dropdown-item dropdown-toggle arrow-none" href="#" id="topnav-invoice"
+                                                role="button">
+                                                <span data-key="t-invoices">Tile cached map</span> <div class="arrow-down"></div>
+                                            </a>
+                                            <div class="dropdown-menu" aria-labelledby="topnav-invoice">
+                                                <a href="#" class="dropdown-item" data-key="t-tcm-zoom">Zoom</a>
+                                                <a href="#" class="dropdown-item" data-key="t-tcm-zoom-offset">Zoom offset</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                              </ul>
+                            <div class="dropdown d-none d-sm-inline-block">
+                                <button type="button" class="btn header-item" id="mode-setting-btn">
+                                    <i data-feather="moon" class="icon-lg layout-mode-dark"></i>
+                                    <i data-feather="sun" class="icon-lg layout-mode-light"></i>
+                                </button>
+                            </div>
+                            <div class="dropdown d-inline-block">
+                                <button type="button" class="btn header-item right-bar-toggle me-2">
+                                    <i data-feather="settings" class="icon-lg"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- ============================================================== -->
+            <!-- Start right Content here -->
+            <!-- ============================================================== -->
+            <div class="main-content">
+              <div id="map" class="leaflet-map" ></div>
+              <table id="bar"><tr><td id="mZ" style="width:18px">N/A</td><td id="mQue" width="100px">&nbsp;Queue: 0&nbsp;</td><td id="mDownload" width="180px">&nbsp;Downloaded 0 (0,0kB) </td><td id='mCoords'>Coords will be there</td></tr></table>
+            </div>
+            <!-- end main content-->
+
         </div>
-      </div>
-    </nav>
-  </div>
-</div>
-<div id="map" style="width: 100%; height: 100%;"></div>
-<!--Menu for polygons -->
-<div class="dropdown-menu dropdown-menu-sm" id="polygon-menu" max-width: 400px;>
-  <a class="dropdown-item" href="#">Action</a>
-  <a class="dropdown-item" href="#">Another action</a>
-  <a class="dropdown-item" href="#">Something else here</a>
-</div>
-<table id="bar"><tr><td id="mZ" style="width:18px">N/A</td><td id="mQue" width="100px">&nbsp;Queue: 0&nbsp;</td><td id="mDownload" width="180px">&nbsp;Downloaded 0 (0,0kB) </td><td id='mCoords'>Coords will be there</td></tr></table>
-<!--sidebar-->
-<div class="offcanvas offcanvas-end w-25" tabindex="-1" id="offcanvas" data-bs-keyboard="false" data-bs-backdrop="false" style="z-index: 1200;">
-  <div class="offcanvas-header">
-      <h6 class="offcanvas-title d-none d-sm-block" id="offcanvas">Service pane</h6>
-      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-  </div>
-  <div class="offcanvas-body px-0">
-    <div class="accordion" id="accordionExample">
-  <div class="accordion-item">
-    <h2 class="accordion-header" id="headingOne">
-      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-        Download Jobs
-      </button>
-    </h2>
-    <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
-      <div class="accordion-body">
-        <strong>This is the first item's accordion body.</strong> It is shown by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
-      </div>
-    </div>
-  </div>
-  <div class="accordion-item">
-    <h2 class="accordion-header" id="headingTwo">
-      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-        Error Log
-      </button>
-    </h2>
-    <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
-      <div class="accordion-body">
-        <p>Somenew text</p>
-        <p>Some new text 2</p>
-        <strong>This is the second item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
-      </div>
-    </div>
-  </div>
-  <div class="accordion-item">
-    <h2 class="accordion-header" id="headingThree">
-      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-        Info Log
-      </button>
-    </h2>
-    <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
-      <div class="accordion-body">
-        <strong>This is the third item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
-      </div>
-    </div>
-  </div>
-</div>
-  </div>
-</div>
-<!--Modal for Download job-->
-<div class="modal fade" id="jobModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="exampleModalLabel">Add Download Job</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form>
-          <div class="mb-3">
-            <label for="recipient-name" class="col-form-label">Map:</label>
-            <select class="form-select" aria-label="Default select example" id="jobMap">
-              <option selected value="0">Select map</option>
-              
-            </select>
-          </div>
-          <div class="mb-3">
-            <label for="message-text" class="col-form-label">Zomm level for download:</label>
-            <select class="form-select" aria-label="Default select example" id="jobZoomLevel">
-              <option selected value="0">Select Z level for downloading</option>
-              <option value="10">Z10</option>
-              <option value="11">Z11</option>
-              <option value="12">Z12</option>
-              <option value="13">Z13</option>
-              <option value="14">Z14</option>
-              <option value="15">Z15</option>
-              <option value="16">Z16</option>
-              <option value="17">Z17</option>
-              <option value="18">Z18</option>
-            </select>
-          </div>
-        </form>
+        <!-- END layout-wrapper -->
 
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" id="startJob">Add job to list</button>
-      </div>
-    </div>
-  </div>
-</div>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
-  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
-  <script src="js/leaflet-tile-grid.js"></script>
-  <script src="js/leaflet.contextmenu.min.js"></script>
-  <script src="js/L.Control.Bar.js"></script>
-  <script src="js/webmap.js"></script>
-</body>
+
+        <!-- Right Sidebar -->
+        <div class="right-bar">
+            <div data-simplebar class="h-100">
+                <div class="rightbar-title d-flex align-items-center bg-dark p-3">
+
+                    <h5 class="m-0 me-2 text-white">Service pane</h5>
+
+                    <a href="javascript:void(0);" class="right-bar-toggle ms-auto">
+                        <i class="mdi mdi-close noti-icon"></i>
+                    </a>
+                </div>
+
+                <!-- Settings -->
+                <hr class="m-0" />
+                  <div class="accordion" id="accordionExample">
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingOne">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                          Download Jobs
+                        </button>
+                      </h2>
+                      <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                          <!-- card body -->
+                          <div class="row align-items-center">
+
+                              <div id="chart" data-colors='["#5156be", "#34c38f"]' class="apex-charts"></div>
+
+                          </div>
+                          <div class="row align-items-center">
+
+                              <div class="mt-4 mt-sm-0">
+                                <p class="mb-1" id="ETA">Download tiles</p>
+                                <h4 id="statJobDownloadTiles">0 from 0</h4>
+                                <p class="mb-1" id="statJobErrorTiles" class="text-danger">Error: 0</p>
+                                <p class="mb-1" id="statJobEmptyTiles" class="text-info">Empty: 0</p>
+                                <p class="mb-1" id="statJobSkipTiles" class="text-warning">Skip: 0</p>
+                              </div>
+                              <ul class="list-unstyled activity-wid mb-0" id="jobsList">
+                                <li class="activity-list">
+                                  <div class="activity-icon avatar-md">
+                                      <span class="avatar-title bg-soft-warning text-warning rounded-circle">
+                                      0
+                                      </span>
+                                  </div>
+                                  <div class="d-flex">
+                                      <div class="flex-grow-1 overflow-hidden me-7">
+                                          <h5 class="font-size-14 mb-1">X0 Y0 Z0</h5>
+                                          <p class="text-truncate text-muted font-size-13">Empty job list</p>
+                                      </div>
+
+                                      <div class="flex-shrink-0 text-end">
+                                          <div class="dropdown">
+                                              <a class="text-muted dropdown-toggle font-size-24" role="button" data-bs-toggle="dropdown" aria-haspopup="true">
+                                                  <i class="mdi mdi-dots-vertical"></i>
+                                              </a>
+
+                                              <div class="dropdown-menu dropdown-menu-end">
+                                                  <a class="dropdown-item" href="#">Nothing to do</a>
+                                              </div>
+                                          </div>
+                                      </div>
+                                  </div>
+                                </li>
+                              </ul>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingTwo">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                          Error Log
+                        </button>
+                      </h2>
+                      <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                          <p>Somenew text</p>
+                          <p>Some new text 2</p>
+                          <strong>This is the second item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+                        </div>
+                      </div>
+                    </div>
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingThree">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                          Info Log
+                        </button>
+                      </h2>
+                      <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+                        <div class="accordion-body">
+                          <strong>This is the third item's accordion body.</strong> It is hidden by default, until the collapse plugin adds the appropriate classes that we use to style each element. These classes control the overall appearance, as well as the showing and hiding via CSS transitions. You can modify any of this with custom CSS or overriding our default variables. It's also worth noting that just about any HTML can go within the <code>.accordion-body</code>, though the transition does limit overflow.
+                        </div>
+                      </div>
+                    </div>
+                </div>
+            </div> <!-- end slimscroll-menu-->
+        </div>
+        <!-- /Right-bar -->
+
+        <!-- Right bar overlay-->
+        <div class="rightbar-overlay"></div>
+        <!--Modal for Download job-->
+        <div class="modal fade" id="jobModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Add Download Job</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form>
+                  <div class="mb-3">
+                    <label for="recipient-name" class="col-form-label">Map:</label>
+                    <select class="form-select" aria-label="Default select example" id="jobMap">
+                      <option selected value="0">Select map</option>
+
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label for="message-text" class="col-form-label">Zomm level for download:</label>
+                    <select class="form-select" aria-label="Default select example" id="jobZoomLevel">
+                      <option selected value="0">Select Z level for downloading</option>
+                      <option value="10">Z10</option>
+                      <option value="11">Z11</option>
+                      <option value="12">Z12</option>
+                      <option value="13">Z13</option>
+                      <option value="14">Z14</option>
+                      <option value="15">Z15</option>
+                      <option value="16">Z16</option>
+                      <option value="17">Z17</option>
+                      <option value="18">Z18</option>
+                    </select>
+                  </div>
+                </form>
+
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="startJob">Add job to list</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- JAVASCRIPT -->
+        <script src="/socket.io/socket.io.js"></script>
+
+        <script src="assets/libs/jquery/jquery.min.js"></script>
+        <script src="assets/libs/bootstrap/js/bootstrap.bundle.min.js"></script>
+        <script src="assets/libs/metismenu/metisMenu.min.js"></script>
+        <script src="assets/libs/simplebar/simplebar.min.js"></script>
+        <script src="assets/libs/node-waves/waves.min.js"></script>
+        <script src="assets/libs/feather-icons/feather.min.js"></script>
+        <!-- pace js -->
+        <script src="assets/libs/pace-js/pace.min.js"></script>
+
+        <script src="assets/libs/apexcharts/apexcharts.min.js"></script>
+        <script src="assets/libs/leaflet/leaflet.js"></script>
+
+        <!-- leaflet map.init -->
+        <script src="assets/js/pages/leaflet-us-states.js"></script>
+        <script src="assets/libs/leaflet/L.Control.Bar.js"></script>
+        <script src="assets/libs/leaflet/leaflet-tile-grid.js"></script>
+        <script src="assets/js/app.js"></script>
+        <script src="assets/js/pages/leaflet-map.init.js"></script>
+
+    </body>
+
+<!-- Mirrored from themesbrand.com/minia/layouts/layouts-horizontal.html by HTTrack Website Copier/3.x [XR&CO'2014], Sun, 30 Jan 2022 09:07:08 GMT -->
 </html>

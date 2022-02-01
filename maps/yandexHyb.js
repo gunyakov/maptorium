@@ -10,14 +10,14 @@ class ExtMap extends map {
   constructor() {
     super();
 
-    this.storage += '/storage/yandex';
+    this.storage += '/storage/yandex_hyb';
     this._info = {
-      id: "yandexsat",
-      type: "map",
-      name: "Yandex Satellite",
+      id: "yandexhyb",
+      type: "layer",
+      name: "Yandex Hybrid",
       submenu: "Yandex",
       tileSize: 256,
-      attribution: "Satellite (Yandex.Maps)"
+      attribution: "Hybrid (Yandex.Maps)"
     };
   }
 
@@ -34,19 +34,10 @@ class ExtMap extends map {
   }
 
   async getURL(z, x, y) {
-    let rnd = await this.getRandomInt(4);
-    let url = `https://core-sat.maps.yandex.net/tiles?l=sat&v=3.941.0&x=${x}&y=${y}&z=${z}&scale=1&lang=ru_RU`;
-    //let url = `https://sat0${rnd}.maps.yandex.net/tiles?l=sat&scale=1&lang=ru_RU&x=${x}&y=${y}&z=${z}`;
+    let url = `https://core-renderer-tiles.maps.yandex.net/tiles?l=skl&x=${x}&y=${y}&z=${z}&scale=1&lang=ru_RU`;
     return url;
   }
 
-  async getRandomInt(max) {
-    let rnd = Math.floor(Math.random() * Math.floor(max));
-    if(rnd == 0) {
-      rnd = 1;
-    }
-    return rnd;
-  }
 }
 
 module.exports = ExtMap;

@@ -67,9 +67,9 @@ class DB {
         //Создаем файл базы
         dbState = await sqlite3.open(dbName).catch((error) => {Log.make("error", "DB", error) });
         if(dbState) {
-          await sqlite3.run(dbName, "CREATE TABLE t (x INTEGER NOT NULL,y INTEGER NOT NULL,v INTEGER DEFAULT 0 NOT NULL,c TEXT,s INTEGER DEFAULT 0 NOT NULL,h INTEGER DEFAULT 0 NOT NULL,d INTEGER NOT NULL,b BLOB,constraint PK_TB primary key (x,y,v));").catch((error) => { Log.make("error", "DB", error) });
+          await sqlite3.run(dbName, "CREATE TABLE IF NOT EXISTS t (x INTEGER NOT NULL,y INTEGER NOT NULL,v INTEGER DEFAULT 0 NOT NULL,c TEXT,s INTEGER DEFAULT 0 NOT NULL,h INTEGER DEFAULT 0 NOT NULL,d INTEGER NOT NULL,b BLOB,constraint PK_TB primary key (x,y,v));").catch((error) => { Log.make("error", "DB", error) });
           //Создаем индекс в таблице
-          await sqlite3.run(dbName, "CREATE INDEX t_v_idx on t (v)").catch((error) => { Log.make("error", "DB", error) });
+          await sqlite3.run(dbName, "CREATE INDEX IF NOT EXISTS t_v_idx on t (v)").catch((error) => { Log.make("error", "DB", error) });
           Log.make("info", "DB", "create " + dbName);
         }
       }

@@ -81,17 +81,19 @@ exports.get = async function(url, responseType = 'text') {
         //Show error message
         if(error.response) {
           //Show error message
-          Log.make("error", "HTTP", error.response.status + " " + error.response.statusText);
-          //If we received status 403 - most probably goggle ban IP
-          if(error.response.status == 403) {
-            //If proxy type is TOR
-            if(config.proxy.tor && config.proxy.enable) {
-              //Try to change TOR ID
-              await TorService.reset().catch((error) => { Log.make("error", "HTTP", error) });
-            }
-          }
-          if(error.response.status == 404) {
-            resolve(404);
+          switch (error.response.status) {
+            case 404:
+              Log.make("warning", "HTTP", error.response.status + " " + error.response.statusText);
+              resolve(404);
+              break;
+            case 403:
+              //If proxy type is TOR
+              if(config.proxy.tor && config.proxy.enable) {
+                //Try to change TOR ID
+                await TorService.reset().catch((error) => { Log.make("error", "HTTP", error) });
+              }
+            default:
+              Log.make("error", "HTTP", error.response.status + " " + error.response.statusText);
           }
         }
         else if(error.code == "ECONNREFUSED") {
@@ -139,7 +141,7 @@ exports.checkProxy = async function() {
         nonProxyReqIP = $(".ip span").html();
       }
       config.proxy.enable = true;
-      if(proxyReqIP == nonProxyReqIP) {
+      if(proxyReqIP == nonProxyReqIP && proxyReqIP != "") {
         Log.make("info", "MAIN", `Proxy isn't working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
       }
       else {

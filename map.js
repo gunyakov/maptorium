@@ -12,10 +12,6 @@ const db = new DB();
 //------------------------------------------------------------------------------
 let Log = require('./log.js');
 //------------------------------------------------------------------------------
-//Statistics
-//------------------------------------------------------------------------------
-let stat = require('./statistics');
-//------------------------------------------------------------------------------
 //General map handler
 //------------------------------------------------------------------------------
 class Map {
@@ -48,6 +44,8 @@ class Map {
         tile = await db.getTile(z, x, y, storage);
         //If tile is present in DB
         if(tile) {
+          //Set that tile was take from db
+          tile.method = "db";
           //Return tile
           return tile;
         }
@@ -56,7 +54,7 @@ class Map {
           //Try to get tile from server
           tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
           //If received tile from server or 404 code
-          if(tile) {
+          if(tile && tile != 404) {
             //If enable to write into DB
             if(config.db.ReadOnly === false) {
               //Insert tile into DB
@@ -65,22 +63,28 @@ class Map {
             //Format tile info
             tile = {
               b: tile.data,
-              s: tile.data.byteLength
+              s: tile.data.byteLength,
+              //Set that tile was downloaded
+              method: "http"
             }
-            //Make stat
-            stat.tiles.download++;
-            stat.tiles.size += tile.s;
             //Return tile
             return tile;
           }
           //If tile missing on server
           else {
-            //Show error message
-            this._log.make("error", "MAP", url);
-            //Make stat
-            stat.tiles.error++;
-            //Return false
-            return false;
+            if(tile == 404) {
+              //Show error message
+              this._log.make("warning", "MAP", url);
+              //Return empty tile
+              return 404;
+            }
+            else {
+              //Show error message
+              this._log.make("error", "MAP", url);
+              //Return false
+              return false;
+            }
+
           }
         }
         break;
@@ -92,6 +96,8 @@ class Map {
         tile = await db.getTile(z, x, y, storage);
         //If tile is present in DB
         if(tile) {
+          //Set that tile was take from db
+          tile.method = "db";
           //Return tile
           return tile;
         }
@@ -108,7 +114,7 @@ class Map {
         //Try to get tile from server
         tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
         //If received tile from server
-        if(tile) {
+        if(tile && tile != 404) {
           //If enable to write into DB
           if(config.db.ReadOnly === false) {
             //Insert or update tile in DB
@@ -117,22 +123,26 @@ class Map {
           //Format tile info
           tile = {
             b: tile.data,
-            s: tile.data.byteLength
+            s: tile.data.byteLength,
+            method: "http"
           }
-          //Make stat
-          stat.tiles.download++;
-          stat.tiles.size += tile.s;
           //Return tile
           return tile;
         }
         //If tile missing on server
         else {
-          //Show error message
-          this._log.make("error", "MAP", url);
-          //Make stat
-          stat.tiles.error++;
-          //Return false
-          return false;
+          if(tile == 404) {
+            //Show error message
+            this._log.make("warning", "MAP", url);
+            //Return empty tile
+            return 404;
+          }
+          else {
+            //Show error message
+            this._log.make("error", "MAP", url);
+            //Return false
+            return false;
+          }
         }
         break;
     }
