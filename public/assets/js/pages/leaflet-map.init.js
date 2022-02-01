@@ -191,7 +191,7 @@ socket.on("stat", (stat) => {
   //console.log(stat.job);
   //console.log(ETA);
   ETA = secondsToHms(ETA / 1000);
-  $("#ETA").html(`Download tiles (ETA ${ETA})`);
+  $("#ETA").html(`ETA ${ETA}`);
 });
 
 socket.emit("getJobList");

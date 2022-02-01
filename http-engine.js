@@ -141,7 +141,7 @@ exports.checkProxy = async function() {
         nonProxyReqIP = $(".ip span").html();
       }
       config.proxy.enable = true;
-      if(proxyReqIP == nonProxyReqIP && proxyReqIP != "") {
+      if(proxyReqIP == nonProxyReqIP && proxyReqIP != "" && typeof proxyReqIP != "undefined") {
         Log.make("info", "MAIN", `Proxy isn't working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
       }
       else {

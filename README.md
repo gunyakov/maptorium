@@ -24,6 +24,12 @@ npm start
 
 After navigate in browser to http://localhost:9000
 
+If you have any problems during SQLite3 module compilation, run next command
+
+```
+npm install https://github.com/mapbox/node-sqlite3/tarball/master
+```
+
 ### Additional Info
 
 All tiles stored in sqlite3 DB. Storage aragement is fully compatible with [SAS Planet](https://sasgis.org)
