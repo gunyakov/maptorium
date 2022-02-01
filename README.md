@@ -1,8 +1,8 @@
 # maptorium
 
-##Tile Map Downloader
+## Tile Map Downloader
 
-###Description
+### Description
 
 ![Main UI](/main.png)
 
@@ -10,7 +10,7 @@ This software can help you to download localy any tile map (now only raster type
 
 ![Stat](/stat.png)
 
-###Installation
+### Installation
 
 ```
 git clone https://github.com/gunyakov/maptorium.git
@@ -24,7 +24,7 @@ npm start
 
 After navigate in browser to http://localhost:9000
 
-###Additional Info
+### Additional Info
 
 All tiles stored in sqlite3 DB. Storage aragement is fully compatible with [SAS Planet](https://sasgis.org)
 
@@ -45,7 +45,7 @@ Next futures to add:
 - Generating up zoom layers from already dowloaded down zoom layer (Example: from Z18 generate Z17-Z10 layers, very usefull for sat imagenery to extremly decrease number of tiles to download)
 - Tile cached map (View on map what tiles from selected zoom and map already in DB)
 
-###Version
+### Version
 
 Very early version 0.5.0. Under heavy development
 
