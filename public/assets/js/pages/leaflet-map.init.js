@@ -1,13 +1,113 @@
+//------------------------------------------------------------------------------
+//Resize map after loading
+//------------------------------------------------------------------------------
 $(document).ready(() => {
   //$("#map").css("top", $(".topnav").height());
   $("#map").height($(window).height() - $(".topnav").height());
-
+});
+//------------------------------------------------------------------------------
+//Socket IO
+//------------------------------------------------------------------------------
+let socket = io();
+//------------------------------------------------------------------------------
+//Init Map
+//------------------------------------------------------------------------------
+//let map = L.map('map').setView([20, 80], 7);
+let map = L.map('map', {
+    renderer: L.canvas()
+}).setView([20, 80], 7);
+//------------------------------------------------------------------------------
+//Default style for geometry
+//------------------------------------------------------------------------------
+let color = "#10db83";
+let fillColor = "#1410db";
+let fillOpacity = 0.6;
+//------------------------------------------------------------------------------
+//Set default style for geometry
+//------------------------------------------------------------------------------
+map.pm.setPathOptions({
+  color: color,
+  fillColor: fillColor,
+  fillOpacity: fillOpacity,
 });
 
-let socket = io();
 
-let map = L.map('map').setView([47.97, 29.67], 13);
+//L.PM.setOptIn(true);
+map.pm.addControls({
+  position: 'topright',
+  drawCircle: false,
+  drawCircleMarker: false,
+  drawRectangle: false,
+  editMode: false,
+  dragMode: false,
+  cutPolygon: false,
+  removalMode: false,
+  rotateMode: false
+});
+//------------------------------------------------------------------------------
+//Finish create geometry element on map
+//------------------------------------------------------------------------------
+map.on("pm:create", (e) => {
+  //Bind context menu for new element
+  e.marker.bindContextMenu({
+    contextmenu: true,
+    contextmenuWidth: 140,
+    contextmenuInheritItems: false,
+    contextmenuItems: [{
+      text: 'Edit',
+      callback: editGeometry//workingLayer.pm.enable()
+    },
+    '-',
+    {
+      text: 'Delete',
+      callback: deleteGeometry//workingLayer.remove()
+    }]
+  });
+  console.log(e.shape);
+  //Send data of element to server
+  let geometry = {
+    type: e.shape,
+    bounds: false,
+    color: color,
+    fillColor: fillColor,
+    fillOpacity: fillOpacity,
+    coords: [],
+    zoom: map.getZoom()
+  }
+  let coords = false;
+  switch(e.shape) {
+    case "Polygon":
+    case "Line":
+      geometry.coords = projectCoords(e.marker.getLatLngs());
 
+      geometry.bounds = e.marker.getBounds();
+      geometry.bounds._southWest = map.project(geometry.bounds._southWest);
+      geometry.bounds._northEast = map.project(geometry.bounds._northEast);
+      break;
+    case "Marker":
+      geometry.coords = map.project(e.marker.getLatLng());
+      break;
+  }
+
+  socket.emit("newGeometry", geometry);
+});
+
+function projectCoords(coords) {
+  let projCoords = [];
+  for(i = 0; i < coords.length; i++) {
+    if(Array.isArray(coords[i])) {
+      coordProject = []
+      for(a = 0; a < coords[i].length; a++) {
+        coordProject.push(map.project(coords[i][a]));
+      }
+      projCoords.push(coordProject);
+    }
+    else {
+      projCoords.push(map.project(coords[i]));
+    }
+  }
+  return projCoords;
+}
 var controlBar = L.control.bar('bar',{
 	position: 'bottom',
 	visible: true
@@ -25,12 +125,6 @@ TileGrid.onAdd(map);
 function setTileGrid(zoom, zoomOffset) {
   TileGrid.setGrid(zoom, zoomOffset);
 }
-let jobConfig = {
-	x: 0,
-	y: 0,
-	requiredZoom: 0,
-	zoom: 0
-};
 
 map.on('click', function(e) {
 	if(selectMode == "tile") {
@@ -50,11 +144,8 @@ map.on('click', function(e) {
 		point = L.point(x1, y1 + 256);
 		point = map.unproject(point, map.getZoom());
 		latlngs.push([point.lat, point.lng]);
-		jobConfig.x = x1 / 256;
-		jobConfig.y = y1 / 256;
-		jobConfig.zoom = map.getZoom();
-		$("#jobModal").modal('show');
-		var polygon = L.polygon(latlngs, {
+		//$("#jobModal").modal('show');
+		let polygon = L.polygon(latlngs, {
 			color: 'red',
 			//contextmenu: true,
 			//contextmenuInheritItems: false,
@@ -67,15 +158,20 @@ map.on('click', function(e) {
   		//}],
 		}).addTo(map);
 		selectMode = false;
-		polygon.on('click', function() {
-			alert( "poly");
-		});
-
-		polygon.on('contextmenu', function(e) {
-
-		}).on("click", function() {
-
-		});
+    //console.log(polygon);
+    let geometry = {
+      type: "Polygon",
+      bounds: false,
+      color: color,
+      fillColor: fillColor,
+      fillOpacity: fillOpacity,
+      coords: projectCoords(polygon.getLatLngs()),
+      bounds: polygon.getBounds(),
+      zoom: map.getZoom()
+    }
+    geometry.bounds._southWest = map.project(geometry.bounds._southWest);
+    geometry.bounds._northEast = map.project(geometry.bounds._northEast);
+    socket.emit("newGeometry", geometry);
 	}
 });
 
@@ -105,6 +201,7 @@ let arrMapsList = {};
 let arrLayersList = {};
 let currentMap = false;
 let currentLayer = false;
+let cachedMap = false;
 socket.on("setMapList", (data) => {
   mapsHtml = "";
   mapsCount = 0;
@@ -149,6 +246,8 @@ socket.on("setMapList", (data) => {
 		}
 	}
   $("#maps-list").html(mapsHtml);
+  cachedMap = L.tileLayer('cachedMap?z={z}&x={x}&y={y}');
+  cachedMap.addTo(map);
 });
 
 function changeMap(mapID) {
@@ -172,28 +271,188 @@ function addLayer(mapID) {
 socket.on("connect", () => {
 	socket.emit("getMapList", "");
 });
-socket.on("stat", (stat) => {
-  //console.log(stat);
-	$("#mQue").html("&nbsp;Queue: " + stat.general.queue);
-	$("#mDownload").html("&nbsp;Download " + stat.general.download + " (" + formatFileSize(stat.general.size, 2) + ")");
-  let proceedTiles = stat.job.download + stat.job.skip + stat.job.error + stat.job.empty;
-  let progress = Math.floor(proceedTiles / stat.job.total * 10000) / 100;
-  chart.updateOptions({
-    series: [progress],
-    labels: [formatFileSize(stat.job.size, 2)]
-  });
+//------------------------------------------------------------------------------
+//Request for geometry in DB
+//------------------------------------------------------------------------------
+socket.emit("getGeometry");
 
-  $("#statJobDownloadTiles").html(proceedTiles + " from " + stat.job.total);
-  $("#statJobErrorTiles").html("Error: " + stat.job.error);
-  $("#statJobEmptyTiles").html("Empty: " + stat.job.empty);
-  $("#statJobSkipTiles").html("Skip: " + stat.job.skip);
-  let ETA = stat.job.time / proceedTiles * stat.job.queue;
-  //console.log(stat.job);
-  //console.log(ETA);
-  ETA = secondsToHms(ETA / 1000);
-  $("#ETA").html(`ETA ${ETA}`);
+let lastGeometry = false;
+
+let saveButton = false;
+//------------------------------------------------------------------------------
+//Recived geometry list from server
+//------------------------------------------------------------------------------
+socket.on("setGeometry", (geometry) => {
+  for(i = 0; i < geometry.length; i++) {
+    var latlngs = [];
+    for(a = 0; a < geometry[i].points.length; a++) {
+      latlngs.push(map.unproject(L.point(geometry[i]['points'][a]['x'], geometry[i]['points'][a]['y'])));
+    }
+    let workingGeometry = '';
+    switch(geometry[i]['type']) {
+      case "Line":
+        workingGeometry = L.polyline(latlngs, {
+          color: geometry[i]['color'],
+          contextmenu: true,
+          contextmenuWidth: 140,
+          contextmenuInheritItems: false,
+          contextmenuItems: [{
+            text: 'Edit',
+            callback: editGeometry//workingLayer.pm.enable()
+          },
+          '-',
+          {
+            text: 'Delete',
+            callback: deleteGeometry//workingLayer.remove()
+          }]
+        }).addTo(map);
+        break;
+      case "Polygon":
+        workingGeometry = L.polygon(latlngs, {
+          color: geometry[i]['color'],
+          fillColor: geometry[i]['fillColor'],
+          fillOpacity: geometry[i]['fillOpacity'],
+          contextmenu: true,
+          contextmenuWidth: 140,
+          contextmenuInheritItems: false,
+          contextmenuItems: [{
+            text: 'Edit',
+            callback: editGeometry
+          },
+          {
+            text: 'Start download job',
+            callback: showJobModal
+          },
+          {
+            text: 'Show tile cached map',
+            callback: showTileCachedMap
+          },
+          '-',
+          {
+            text: 'Delete',
+            callback: deleteGeometry
+          }]
+        }).addTo(map);
+        break;
+      case "Marker":
+        workingGeometry = L.marker(latlngs[0], {
+          contextmenu: true,
+          contextmenuWidth: 140,
+          contextmenuInheritItems: false,
+          contextmenuItems: [{
+            text: 'Move',
+            callback: editGeometry//workingLayer.pm.enable()
+          },
+          '-',
+          {
+            text: 'Delete',
+            callback: deleteGeometry//workingLayer.remove()
+          }]
+        }).addTo(map);
+        break;
+    }
+    if(geometry[i]['name']) {
+      workingGeometry.bindTooltip(geometry[i]['name']);
+    }
+    else {
+      workingGeometry.bindTooltip('Geometry ' + geometry[i]['ID']);
+    }
+    workingGeometry.shape = geometry[i]['type'];
+    workingGeometry.maptoriumID = geometry[i]['ID'];
+  }
+
 });
-
+/*map.pm.enableDraw('Marker', {
+  snappable: true,
+  snapDistance: 20,
+});*/
+//------------------------------------------------------------------------------
+//Tiled cached map
+//------------------------------------------------------------------------------
+let CachedMap = L.cachedgrid();
+CachedMap.onAdd(map);
+//map.addLayer(CachedMap);
+function showTileCachedMap(e) {
+  socket.emit("getTileCachedMap", {ID: e.relatedTarget.maptoriumID});
+}
+socket.on("setTileCachedMap", async (cachedMap) => {
+  //cachedMap.setUrl(`cachedMap?z={z}&x={x}&y={y}&r=${Date.now()}`);
+  CachedMap.setData(cachedMap);
+  //CachedMap.bringToFront();
+});
+socket.on("updateTileCachedMap", async (tileInfo) => {
+  CachedMap.updateTile(tileInfo);
+});
+//------------------------------------------------------------------------------
+//Context menu: EDIT GEOMETRY
+//------------------------------------------------------------------------------
+function editGeometry(e) {
+  //Show button to save result
+  saveButton = L.easyButton( `<a class="nav-link dropdown-toggle arrow-none" href="#" id="topnav-pages" role="button">
+                                <span data-key="t-apps"></span>
+                              </a>`, function(){
+    //Remove button from map
+    saveButton.remove();
+    //If we have alredy edited geometry
+    if(lastGeometry) {
+      //Hide editing vortex
+      lastGeometry.pm.disable();
+      //Init geometry OBJ
+      let geometry = {
+        ID: lastGeometry.maptoriumID,
+        type: lastGeometry.shape,
+        bounds: false,
+        color: color,
+        fillColor: fillColor,
+        fillOpacity: fillOpacity
+      }
+      //Add bounds and LngLat arrays
+      switch(lastGeometry.shape) {
+        case "Polygon":
+        case "Line":
+          geometry.coords = coordProject(lastGeometry.getLatLngs());
+          geometry.bounds = lastGeometry.getBounds();
+          geometry.bounds._southWest = map.project(geometry.bounds._southWest);
+          geometry.bounds._northEast = map.project(geometry.bounds._northEast);
+          break;
+        case "Marker":
+          geometry.coords = map.project(lastGeometry.getLatLng());
+          break;
+      }
+      geometry.zoom = map.getZoom();
+      //Send data to server
+      socket.emit("updateGeometry", geometry);
+    }
+  }).addTo(map);
+  //If we have last geometry
+  if(lastGeometry) {
+    //Hide editing vortex
+    lastGeometry.pm.disable();
+  }
+  //Enable editing vortex for current geometry
+  e.relatedTarget.pm.enable();
+  //Save current geometry into var
+  lastGeometry = e.relatedTarget;
+}
+//------------------------------------------------------------------------------
+//Context menu: DELETE GEOMETRY
+//------------------------------------------------------------------------------
+function deleteGeometry(e) {
+  //Send to server ID of geometry
+  socket.emit("deleteGeometry", e.relatedTarget.maptoriumID);
+  //Remove geometry from map
+  e.relatedTarget.remove();
+}
+//------------------------------------------------------------------------------
+//Show confog window for job order
+//------------------------------------------------------------------------------
+function showJobModal(e) {
+  $("#polygonID").val(e.relatedTarget.maptoriumID);
+  $("#jobModal").modal('show');
+}
+//------------------------------------------------------------------------------
+//Request for jobs list on server
+//------------------------------------------------------------------------------
 socket.emit("getJobList");
 socket.on("setJobList", (arrJobList) => {
   let jobHTML = "";
@@ -210,7 +469,7 @@ socket.on("setJobList", (arrJobList) => {
       </div>
       <div class="d-flex">
           <div class="flex-grow-1 overflow-hidden me-7">
-              <h5 class="font-size-14 mb-1">X${arrJobList[i].x} Y${arrJobList[i].y} Z${arrJobList[i].zoom}</h5>
+              <h5 class="font-size-14 mb-1">Polygon ID ${arrJobList[i]['polygonID']} Z${arrJobList[i]['zoom']}</h5>
               <p class="text-truncate text-muted font-size-13">${arrJobList[i].map}</p>
           </div>
 
@@ -233,6 +492,9 @@ socket.on("setJobList", (arrJobList) => {
   }
   $("#jobsList").html(jobHTML);
 });
+//------------------------------------------------------------------------------
+//Additional functions
+//------------------------------------------------------------------------------
 function formatFileSize(bytes,decimalPoint) {
    if(bytes == 0) return '0 Bytes';
    var k = 1000,
@@ -252,12 +514,16 @@ function secondsToHms(d) {
     var sDisplay = s > 0 ? s + (s == 1 ? " s" : " ss") : "";
     return hDisplay + mDisplay + sDisplay;
 }
-
+//------------------------------------------------------------------------------
+//Send to server new job ORDER
+//------------------------------------------------------------------------------
 $("#startJob").on("click", function(e) {
 	$("#jobModal").modal('hide');
-	jobConfig.requiredZoom = $("#jobZoomLevel option:selected").val();
+  let jobConfig = {};
+  jobConfig.polygonID = $("#polygonID").val();
+	jobConfig.zoom = $("#jobZoomLevel option:selected").val();
 	jobConfig.map = $("#jobMap option:selected").val();
-	socket.emit("jobOrder", jobConfig);
+	socket.emit("jobAdd", jobConfig);
 });
 
 function getChartColorsArray(r) {
@@ -313,3 +579,24 @@ options = {
 };
 let chart = new ApexCharts(document.querySelector("#chart"), options)
 chart.render();
+socket.on("stat", (stat) => {
+  //console.log(stat);
+	$("#mQue").html("&nbsp;Queue: " + stat.general.queue);
+	$("#mDownload").html("&nbsp;Download " + stat.general.download + " (" + formatFileSize(stat.general.size, 2) + ")");
+  let proceedTiles = stat.job.download + stat.job.skip + stat.job.error + stat.job.empty;
+  let progress = Math.floor(proceedTiles / stat.job.total * 10000) / 100;
+  chart.updateOptions({
+    series: [progress],
+    labels: [formatFileSize(stat.job.size, 2)]
+  });
+
+  $("#statJobDownloadTiles").html(proceedTiles + " from " + stat.job.total);
+  $("#statJobErrorTiles").html("Error: " + stat.job.error);
+  $("#statJobEmptyTiles").html("Empty: " + stat.job.empty);
+  $("#statJobSkipTiles").html("Skip: " + stat.job.skip);
+  let ETA = stat.job.time / proceedTiles * stat.job.queue;
+  //console.log(stat.job);
+  //console.log(ETA);
+  ETA = secondsToHms(ETA / 1000);
+  $("#ETA").html(`ETA ${ETA}`);
+});

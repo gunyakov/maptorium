@@ -8,9 +8,17 @@ let config = require('./config');
 //------------------------------------------------------------------------------
 let stat = require('./statistics');
 //------------------------------------------------------------------------------
+//MD5 to hashed tile names
+//------------------------------------------------------------------------------
+const md5 = require('md5');
+//------------------------------------------------------------------------------
 //Wait функция
 //------------------------------------------------------------------------------
 let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+//------------------------------------------------------------------------------
+//Cached tile map
+//------------------------------------------------------------------------------
+const CachedMap = require('./cachedmap');
 //------------------------------------------------------------------------------
 //Express with socket io
 //------------------------------------------------------------------------------
@@ -28,6 +36,11 @@ const io = new Server(httpServer, { /* options */ });
 let log = require('./log.js');
 const Log = new log();
 //------------------------------------------------------------------------------
+//Geometry handler
+//------------------------------------------------------------------------------
+let geometry = require("./geometry");
+const Geometry = new geometry();
+//------------------------------------------------------------------------------
 //Some vars for service
 //------------------------------------------------------------------------------
 //Global list of tiles required by GET
@@ -38,13 +51,15 @@ let arrJobTilesList = [];
 let threadRunList = [];
 //Global list of maps (now not yet used)
 let arrMaps = {};
-//----------------------------------------------------------------------------------------------------------------------
+//Global tile list for cached map
+let tileCachedList = {};
+//------------------------------------------------------------------------------
 //Static files for browser map
-//----------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 app.use(express.static(path.join(__dirname, 'public')));
-//----------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 //GET request for tiles
-//----------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 app.get(["/tile", "/cesium/tile"], async function(request, response){
   //Получаем данные из запроса
   let parseReq = url.parse(request.url, true);
@@ -53,7 +68,7 @@ app.get(["/tile", "/cesium/tile"], async function(request, response){
   //Переводим все значения в числовые
   q.z = parseInt(q.z);
   q.x = parseInt(q.x);
-  q.x = parseInt(q.x);
+  q.y = parseInt(q.y);
   //Устанавливаем максимальное значение координат тайла
   let maxTileNumber = 1;
   //Изменяем максимальный номер тайла в соответсвии с уровнем увеличения
@@ -86,6 +101,35 @@ app.get(["/tile", "/cesium/tile"], async function(request, response){
     //Запускаем потоки загрузки
     threadsStarter();
   }
+});
+//------------------------------------------------------------------------------
+//Get request for cached tile map
+//------------------------------------------------------------------------------
+let tileCachedMap = {};
+app.get(["/cachedMap"], async function(request, response){
+  //Получаем данные из запроса
+  let parseReq = url.parse(request.url, true);
+  //Получаем данный для загрузки тайлов
+  let q = parseReq.query;
+  //Переводим все значения в числовые
+  let z = parseInt(q.z);
+  let x = parseInt(q.x);
+  let y = parseInt(q.y);
+
+  let tileName = md5('' + z + x + y);
+
+  if(typeof tileCachedMap[tileName] !== "undefined") {
+    response.writeHead(200, {'Content-Type': 'image/png', "Content-Length": Buffer.byteLength(tileCachedMap[tileName])});
+    response.end(tileCachedMap[tileName]);
+  }
+  else {
+    response.writeHead(200, {'Content-Type': 'image/png', "Content-Length": 0});
+    response.end('');
+  }
+
+
+  //response.end(buffer);
+
 });
 //------------------------------------------------------------------------------
 //Функция, которая запускает потоки загрузки тайлов
@@ -157,7 +201,6 @@ async function tilesService(threadNumber) {
         jobTile = arrJobTilesList.shift();
         //Set stat type
         statType = "job";
-
       }
       //if get tile info before
       if(jobTile) {
@@ -173,6 +216,10 @@ async function tilesService(threadNumber) {
           if (tile && tile != 404) {
             //If tile was received by http request
             if(tile.method == "http") {
+              let tileName = md5('' + jobTile.x + jobTile.y + jobTile.z + jobTile.map);
+              if(typeof tileCachedList[tileName] !== "undefined") {
+                io.emit("updateTileCachedMap", {name: tileName, state: "present"});
+              }
               //Make stat
               stat.general.download++;
               stat.general.size += tile.s;
@@ -199,6 +246,10 @@ async function tilesService(threadNumber) {
           //If tile didn`t handle or some error in tile downloading
           else {
             if(tile == 404) {
+              let tileName = md5('' + jobTile.x + jobTile.y + jobTile.z + jobTile.map);
+              if(typeof tileCachedList[tileName] !== "undefined") {
+                io.emit("updateTileCachedMap", {name: tileName, state: "empty"});
+              }
               //Make stat
               stat.general.empty++;
               if(statType == "job") {
@@ -226,7 +277,9 @@ async function tilesService(threadNumber) {
           stat.general.queue = arrTilesList.length + arrJobTilesList.length;
           stat.job.queue = arrJobTilesList.length;
           //Send stat to UI
-          io.emit("stat", stat);
+          if(threadNumber == 1) {
+            io.emit("stat", stat);
+          }
         }
         //If haven`t connect map handler
         else {
@@ -282,7 +335,7 @@ io.on('connection', function(socket){
   //----------------------------------------------------------------------------
   //New job order request
   //----------------------------------------------------------------------------
-  socket.on("jobOrder", (jobConfig) => {
+  socket.on("jobAdd", (jobConfig) => {
     //Push job order to list
     jobConfig.running = false;
     arrJobList.push(jobConfig);
@@ -302,11 +355,80 @@ io.on('connection', function(socket){
         break;
     }
   });
+  //----------------------------------------------------------------------------
+  //Add polygons/points (geometry) to DB
+  //----------------------------------------------------------------------------
+  socket.on("newGeometry", async (geometry) => {
+    await Geometry.save(geometry);
+  });
+  //----------------------------------------------------------------------------
+  //Delete polygons/points (geometry) from map
+  //----------------------------------------------------------------------------
+  socket.on("deleteGeometry", async (ID) => {
+    await Geometry.delete(ID);
+  });
+  //----------------------------------------------------------------------------
+  //Update polygons/points (geometry) in DB
+  //----------------------------------------------------------------------------
+  socket.on("updateGeometry", async (geometry) => {
+    await Geometry.update(geometry);
+  });
+  //----------------------------------------------------------------------------
+  //Tile Cached Map
+  //----------------------------------------------------------------------------
+  socket.on("getTileCachedMap", async (mapInfo) => {
+    let map = "googlesat";
+    let mapObj = arrMaps[map];
+    let requiredZoom = 12;
+    let tempArr = await Geometry.tileList(mapInfo.ID, requiredZoom, map);
+    let time = Date.now();
+    Log.make("info", "MAIN", "Start checking tiles in DB for cached map.");
+    if(Array.isArray(tempArr)) {
+      tileCachedList = {};
+      for(i = 0; i < tempArr.length; i++) {
+        let checkTile = await mapObj.checkTile(tempArr[i]['z'], tempArr[i]['x'], tempArr[i]['y']);
+        let tileInfo = {
+          x: tempArr[i]['x'],
+          y: tempArr[i]['y'],
+          state: "missing"
+        }
+        let tileName = md5('' + tempArr[i]['x'] + tempArr[i]['y'] + requiredZoom + map);
+        if(checkTile) {
+          if(checkTile.s != 0) {
+            tileInfo.state = "present";
+          }
+          else {
+            tileInfo.state = "empty";
+          }
+        }
+        tileCachedList[tileName] = tileInfo;
+      }
+      let cachedMap = {
+        zoom: requiredZoom,
+        tiles: tileCachedList
+      }
+      time = Math.round((Date.now() - time) / 1000);
+      Log.make("info", "MAIN", `Finished checking tiles in DB for cached map. Time spend ${time}.`);
+      time = Date.now();
+      tileCachedMap = await CachedMap.generateMap(cachedMap);
+      time = Math.round((Date.now() - time) / 1000);
+      Log.make("info", "MAIN", `Finished generating tiles for cached map. Time spend ${time}.`);
+      //socket.emit("setTileCachedMap", cachedMap);
+    }
+  });
+  //----------------------------------------------------------------------------
+  //Request for server LOG
+  //----------------------------------------------------------------------------
   socket.on("logHistory", () =>{
+    //Send log history back
     socket.emit("logHistory", Log.get());
   });
   socket.on("getJobList", () => {
     socket.emit("setJobList", arrJobList);
+  });
+  socket.on("getGeometry", async () => {
+    let geometry = await Geometry.get();
+    io.emit("setGeometry", geometry);
   });
   socket.on('disconnect', function() {
     Log.make("info", "MAIN", "User disconnected by socket.io");
@@ -319,32 +441,7 @@ io.on('connection', function(socket){
 let arrJobList = [];
 //Init curent job config
 let currentJob = {};
-//Generate tiles list for job list
-let tileList = async function(selectedX, selectedY, selectedZoom, requiredZoom, map = "google") {
-  let startX = selectedX * Math.pow(2, requiredZoom - selectedZoom);
-  let startY = selectedY * Math.pow(2, requiredZoom - selectedZoom);
-  let stopX = startX + Math.pow(2, requiredZoom - selectedZoom);
-  let stopY = startY + Math.pow(2, requiredZoom - selectedZoom);
-  //let listTiles = [];
-  for(let x = startX; x < stopX; x++) {
-    for(let y = startY; y < stopY; y++) {
-      //Добавляем в список координаты тайлов
-      arrJobTilesList.push({
-        x: parseInt(x),
-        y: parseInt(y),
-        z: parseInt(requiredZoom),
-        response: false,
-        map: map
-      });
-    }
-  }
-  //Make stat
-  stat.job.total = arrJobTilesList.length;
-  stat.job.queue = arrJobTilesList.length;
-  threadsStarter();
-  Log.make("info", "MAIN", "Job started. Tile Count: " + arrJobTilesList.length);
-  return;
-};
+
 //------------------------------------------------------------------------------
 //Init
 //------------------------------------------------------------------------------
@@ -376,7 +473,10 @@ let tileList = async function(selectedX, selectedY, selectedZoom, requiredZoom, 
   //Open port for incoming requests
   //----------------------------------------------------------------------------
   await httpServer.listen(config.service.port);
-  Log.make("info", "MAIN", "Start service on port " + config.service.port);
+  Log.make("success", "MAIN", "Start service on port " + config.service.port);
+
+  let geometry = await Geometry.get();
+  io.emit("setGeometry", geometry);
   //----------------------------------------------------------------------------
   //Service for starting jobs
   //----------------------------------------------------------------------------
@@ -406,7 +506,15 @@ let tileList = async function(selectedX, selectedY, selectedZoom, requiredZoom, 
         //Send job list to client
         io.emit("setJobList", arrJobList);
         //Create tile list for job and start threads
-        tileList(currentJob.x, currentJob.y, currentJob.zoom, currentJob.requiredZoom, currentJob.map);
+        let tempArr = await Geometry.tileList(currentJob.polygonID, currentJob.zoom, currentJob.map);
+        if(Array.isArray(tempArr)) {
+          arrJobTilesList = tempArr;
+          //Make stat
+          stat.job.total = arrJobTilesList.length;
+          stat.job.queue = arrJobTilesList.length;
+          Log.make("info", "MAIN", "Job started. Tile Count: " + arrJobTilesList.length);
+          threadsStarter();
+        }
       }
     }
   }

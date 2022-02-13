@@ -24,7 +24,7 @@ class ExtMap extends map {
   async getTile(z, x, y) {
     let tileUrl = await this.getURL(z, x, y);
     this._log.make("info", "HTTP", tileUrl);
-    let tile = await this.getTileMain(z, x, y, this.storage, tileUrl);
+    let tile = await this.getTileMain(z, x, y, tileUrl);
     if(tile) {
       return tile;
     }

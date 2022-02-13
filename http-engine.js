@@ -127,8 +127,8 @@ exports.checkProxy = async function() {
     if(config.proxy.enable) {
       const cheerio = require('cheerio');
       let data = await this.get("https://2ip.ru/");
-      let proxyReqIP = "";
-      let nonProxyReqIP = "";
+      let proxyReqIP = false;
+      let nonProxyReqIP = false;
       let $  = "";
       if(data) {
         $ = cheerio.load(data.data);
@@ -141,11 +141,11 @@ exports.checkProxy = async function() {
         nonProxyReqIP = $(".ip span").html();
       }
       config.proxy.enable = true;
-      if(proxyReqIP == nonProxyReqIP && proxyReqIP != "" && typeof proxyReqIP != "undefined") {
-        Log.make("info", "MAIN", `Proxy isn't working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
+      if(proxyReqIP == nonProxyReqIP || !proxyReqIP) {
+        Log.make("error", "MAIN", `Proxy isn't working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
       }
       else {
-        Log.make("info", "MAIN", `Proxy is working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
+        Log.make("success", "MAIN", `Proxy is working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
       }
     }
   })();

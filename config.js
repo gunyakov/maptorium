@@ -16,7 +16,7 @@ let config = {
   db: {
     //Prevent write in DB any tiles in any mode
     ReadOnly: false,
-    //Idle time to close DB file if idle
+    //Idle time in seconds to close DB file if idle
     OpenTime: 15
   },
   network: {
@@ -25,7 +25,7 @@ let config = {
   },
   proxy: {
     //Use proxy or not (true or false)
-    enable: false,
+    enable: true,
     //Enable tor change ID
     tor: true,
     //Type of proxy(socks, socks4, socks5, http, https)
@@ -50,31 +50,37 @@ let config = {
     //How many entries keep in logs
     length: 20,
     DB: {
-      info: false,
+      success: true,
+      info: true,
       error: true,
       warning: true
     },
     MAP: {
+      success: true,
       info: true,
       error: true,
       warning: true
     },
     SQLITE3: {
+      success: true,
       info: false,
       error: true,
       warning: true
     },
     HTTP: {
+      success: true,
       info: false,
       error: true,
       warning: true
     },
     GPS: {
+      success: true,
       info: true,
       error: true,
       warning: true
     },
     MAIN: {
+      success: true,
       info: true,
       error: true,
       warning: true

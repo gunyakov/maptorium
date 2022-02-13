@@ -31,7 +31,7 @@ class Map {
   //----------------------------------------------------------------------------
   //Main tile handler
   //----------------------------------------------------------------------------
-  async getTileMain(z, x, y, storage, url) {
+  async getTileMain(z, x, y, url) {
     //Reset tile info
     let tile = "";
     //Switch of network state
@@ -41,11 +41,9 @@ class Map {
       //------------------------------------------------------------------------
       case "enable":
         //Try to get tile from DB
-        tile = await db.getTile(z, x, y, storage);
+        tile = await this.checkTile(z, x, y, this.storage);
         //If tile is present in DB
         if(tile) {
-          //Set that tile was take from db
-          tile.method = "db";
           //Return tile
           return tile;
         }
@@ -81,10 +79,10 @@ class Map {
             else {
               //Show error message
               this._log.make("error", "MAP", url);
+              await db.saveTile(z, x, y, this.storage, '', 0, this._mapVersion);
               //Return false
               return false;
             }
-
           }
         }
         break;
@@ -93,19 +91,9 @@ class Map {
       //------------------------------------------------------------------------
       case "disable":
         //Try to get tile from DB
-        tile = await db.getTile(z, x, y, storage);
-        //If tile is present in DB
-        if(tile) {
-          //Set that tile was take from db
-          tile.method = "db";
-          //Return tile
-          return tile;
-        }
-        //If tile is missing in DB
-        else {
-          //Return false
-          return false;
-        }
+        tile = await this.checkTile(z, x, y, this.storage);
+        //Return result
+        return tile;
         break;
       //------------------------------------------------------------------------
       //Internet mode
@@ -145,6 +133,25 @@ class Map {
           }
         }
         break;
+    }
+  }
+  //----------------------------------------------------------------------------
+  //Check if tile is present in DB
+  //----------------------------------------------------------------------------
+  async checkTile(z, x, y) {
+    //Try to get tile from DB
+    let tile = await db.getTile(z, x, y, this.storage);
+    //If tile is present in DB
+    if(tile) {
+      //Set that tile was take from db
+      tile.method = "db";
+      //Return tile
+      return tile;
+    }
+    //If tile is missing in DB
+    else {
+      //Return false
+      return false;
     }
   }
 }

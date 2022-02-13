@@ -1,10 +1,23 @@
+//------------------------------------------------------------------------------
+//SQLITE3 driver
+//------------------------------------------------------------------------------
 const sqlite3 = require('sqlite3').verbose();
+//------------------------------------------------------------------------------
+//MD5 to store DB file name in list
+//------------------------------------------------------------------------------
 const md5 = require('md5');
+//------------------------------------------------------------------------------
+//Logging service
+//------------------------------------------------------------------------------
 let log = require('./log.js');
-let Log = new log();
-
+const Log = new log();
+//------------------------------------------------------------------------------
+//Array to store all opened SQLITE DB descriptors
+//------------------------------------------------------------------------------
 let arrDBSQLITE3 = {};
-
+//------------------------------------------------------------------------------
+//Init SQLITE3 Promise Wrapper
+//------------------------------------------------------------------------------
 function SQLite3Promise () {
 
 }
@@ -76,7 +89,7 @@ SQLite3Promise.prototype.get = function (dbName, query, params = []) {
     arrDBSQLITE3[dbNameHash].get(query, params, function(err, row)  {
         if(err) {
           Log.make("error", "SQLITE3", err.message + " " + dbName);
-          reject(false);
+          resolve(false);
         }
         else {
           Log.make("info", "SQLITE3", "get() " + dbName);
@@ -93,7 +106,7 @@ SQLite3Promise.prototype.all = function (dbName, query, params = []) {
     arrDBSQLITE3[dbNameHash].all(query, params, function(err, rows)  {
         if(err) {
           Log.make("error", "SQLITE3", err.message + " " + dbName);
-          reject(false);
+          resolve(false);
         }
         else {
           Log.make("info", "SQLITE3", "all() " + dbName);
@@ -131,7 +144,7 @@ SQLite3Promise.prototype.close = function (dbName) {
       arrDBSQLITE3[dbNameHash].close(function(err, row)  {
           if(err) {
             Log.make("error", "SQLITE3", err.message + " " + dbName);
-            reject(false)
+            rsolve(false)
           }
           else {
             Log.make("info", "SQLITE3", "close() " + dbName);

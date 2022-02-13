@@ -1,3 +1,6 @@
+//------------------------------------------------------------------------------
+//Maptorium module to draw tile mesh
+//------------------------------------------------------------------------------
 L.TileGrid = L.Class.extend({
   options: {
 		zoom: 4,
@@ -86,7 +89,7 @@ L.TileGrid = L.Class.extend({
   	var y = Math.floor(mapBounds.min.y / scaleFactor);
   	var x2 = Math.ceil(mapBounds.max.x / scaleFactor);
   	var y2 = Math.ceil(mapBounds.max.y / scaleFactor);
-    var gridGroupe = L.layerGroup();
+    var gridGroupe = L.featureGroup();
     //Рисуем вертикальные линии
   	for(i = x; i <= x2; i++) {
   		xCoord = i * scaleFactor;

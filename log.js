@@ -14,12 +14,13 @@ class Log {
     this.arrLog = {
       'info': [],
       'error': [],
-      'warning': []
+      'warning': [],
+      'success': []
     }
   }
 
   async make(type, module,  message) {
-    if(type != "info" && type != "error" && type != "warning") {
+    if(type != "info" && type != "error" && type != "warning" && type != "success") {
       type = "info";
     }
     //If entries counter more than set in config
@@ -31,8 +32,8 @@ class Log {
     this.arrLog[type].push(message);
     //If eneble display such type of mesage in block
     if(config.log[module][type]) {
-      //Show info message
-      if(type == "info") {
+      //Show success message
+      if(type == "success") {
         console.log(colors.green(new Date().toLocaleString("en-GB")), colors.green.bold(type.toUpperCase()), colors.green.bold(module.toUpperCase()), colors.green(message));
       }
       //Show error message
@@ -42,6 +43,10 @@ class Log {
       //Show error message
       if(type == "warning") {
         console.log(colors.yellow(new Date().toLocaleString("en-GB")), colors.yellow.bold(type.toUpperCase()), colors.yellow.bold(module.toUpperCase()), colors.yellow(message));
+      }
+      //Show info message
+      if(type == "info") {
+        console.log(colors.blue(new Date().toLocaleString("en-GB")), colors.blue.bold(type.toUpperCase()), colors.blue.bold(module.toUpperCase()), colors.blue(message));
       }
     }
   }
