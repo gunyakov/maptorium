@@ -23,7 +23,6 @@ function SQLite3Promise () {
 }
 
 SQLite3Promise.prototype.open = function (dbName) {
-  //console.log("Construct", this.dbName);
   let dbNameHash = md5(dbName);
   if(typeof arrDBSQLITE3[dbNameHash] === "undefined" || arrDBSQLITE3[dbNameHash] === false) {
     return new Promise(function(resolve, reject) {
@@ -82,7 +81,7 @@ SQLite3Promise.prototype.run = function(dbName, query, params = []) {
   })
 }
 
-  // first row read
+// first row read
 SQLite3Promise.prototype.get = function (dbName, query, params = []) {
   let dbNameHash = md5(dbName);
   return new Promise(function(resolve, reject) {

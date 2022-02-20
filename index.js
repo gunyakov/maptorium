@@ -170,6 +170,19 @@ async function threadsStarter() {
 //------------------------------------------------------------------------------
 //Функция потока загрузки тайлов
 //------------------------------------------------------------------------------
+async function emitTileUpdate(map, x, y, zoom, state) {
+  if(typeof tileCachedList.map !== "undefined" && typeof tileCachedList.zoom !== "undefined") {
+    if(tileCachedList.map == map && tileCachedList.zoom == zoom) {
+      if(typeof tileCachedList.tiles[x] !== "undefined") {
+        if(typeof tileCachedList.tiles[x][y] !== "undefined") {
+          tileCachedList.tiles[x][y] = state;
+          io.emit("updateTileCachedMap", {x: x, y: y, state: state});
+        }
+      }
+    }
+  }
+  return;
+}
 async function tilesService(threadNumber) {
   Log.make("info", "MAIN", "Thread " + threadNumber + " was started.");
   //Устанавливаем что поток запущен
@@ -216,10 +229,7 @@ async function tilesService(threadNumber) {
           if (tile && tile != 404) {
             //If tile was received by http request
             if(tile.method == "http") {
-              let tileName = md5('' + jobTile.x + jobTile.y + jobTile.z + jobTile.map);
-              if(typeof tileCachedList[tileName] !== "undefined") {
-                io.emit("updateTileCachedMap", {name: tileName, state: "present"});
-              }
+              await emitTileUpdate(jobTile.map, jobTile.x, jobTile.y, jobTile.z, "present");
               //Make stat
               stat.general.download++;
               stat.general.size += tile.s;
@@ -246,10 +256,7 @@ async function tilesService(threadNumber) {
           //If tile didn`t handle or some error in tile downloading
           else {
             if(tile == 404) {
-              let tileName = md5('' + jobTile.x + jobTile.y + jobTile.z + jobTile.map);
-              if(typeof tileCachedList[tileName] !== "undefined") {
-                io.emit("updateTileCachedMap", {name: tileName, state: "empty"});
-              }
+              await emitTileUpdate(jobTile.map, jobTile.x, jobTile.y, jobTile.z, "empty");
               //Make stat
               stat.general.empty++;
               if(statType == "job") {
@@ -359,6 +366,7 @@ io.on('connection', function(socket){
   //Add polygons/points (geometry) to DB
   //----------------------------------------------------------------------------
   socket.on("newGeometry", async (geometry) => {
+    Log.make("info", "MAIN", "Request to save new geometry.");
     await Geometry.save(geometry);
   });
   //----------------------------------------------------------------------------
@@ -379,41 +387,35 @@ io.on('connection', function(socket){
   socket.on("getTileCachedMap", async (mapInfo) => {
     let map = "googlesat";
     let mapObj = arrMaps[map];
-    let requiredZoom = 12;
+    let requiredZoom = 13;
     let tempArr = await Geometry.tileList(mapInfo.ID, requiredZoom, map);
     let time = Date.now();
     Log.make("info", "MAIN", "Start checking tiles in DB for cached map.");
     if(Array.isArray(tempArr)) {
-      tileCachedList = {};
+      tileCachedList = {map: map, zoom: requiredZoom, tiles: {}};
       for(i = 0; i < tempArr.length; i++) {
         let checkTile = await mapObj.checkTile(tempArr[i]['z'], tempArr[i]['x'], tempArr[i]['y']);
-        let tileInfo = {
-          x: tempArr[i]['x'],
-          y: tempArr[i]['y'],
-          state: "missing"
-        }
-        let tileName = md5('' + tempArr[i]['x'] + tempArr[i]['y'] + requiredZoom + map);
+        let state = "missing";
         if(checkTile) {
           if(checkTile.s != 0) {
-            tileInfo.state = "present";
+            state = "present";
           }
           else {
-            tileInfo.state = "empty";
+            state = "empty";
           }
         }
-        tileCachedList[tileName] = tileInfo;
-      }
-      let cachedMap = {
-        zoom: requiredZoom,
-        tiles: tileCachedList
+        if(typeof tileCachedList.tiles[tempArr[i]['x']] == "undefined") {
+          tileCachedList.tiles[tempArr[i]['x']] = {};
+        }
+        tileCachedList.tiles[tempArr[i]['x']][tempArr[i]['y']] = state;
       }
       time = Math.round((Date.now() - time) / 1000);
       Log.make("info", "MAIN", `Finished checking tiles in DB for cached map. Time spend ${time}.`);
       time = Date.now();
-      tileCachedMap = await CachedMap.generateMap(cachedMap);
+      //tileCachedMap = await CachedMap.generateMap(cachedMap);
       time = Math.round((Date.now() - time) / 1000);
       Log.make("info", "MAIN", `Finished generating tiles for cached map. Time spend ${time}.`);
-      //socket.emit("setTileCachedMap", cachedMap);
+      socket.emit("setTileCachedMap", tileCachedList);
     }
   });
   //----------------------------------------------------------------------------

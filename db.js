@@ -59,7 +59,7 @@ class DB {
   //----------------------------------------------------------------------------
   //General function, handle DB file opening / creating tables by request
   //----------------------------------------------------------------------------
-  async getDB(z, x, y, storage, force = false) {
+  async getDB(z, x, y, storage) {
     //Get full folder + file name path to DB file
     let dbName = await this.getDBName(z, x, y, storage);
     //Generate DB name hash
@@ -84,7 +84,7 @@ class DB {
       }
     }
     //If DB state isn`t 'open' - mean DB still not opened/tables still not created
-    if(this.arrDB[dbNameHash]['state'] != "open" || force === true) {
+    if(this.arrDB[dbNameHash]['state'] != "open") {
       //Generate full path to DB file
       var dbPath = await this.getDBPath(z, x, y, storage);
       //Check if folders for DB storage is present
@@ -138,34 +138,29 @@ class DB {
   async getTile(z, x, y, storage) {
     //Get folder + file name of DB
     let dbName = await this.getDBName(z, x, y, storage);
-    //Set than no deed to open DB on force mode
-    let force = false;
-    //Start cycle
-    while(true) {
-      //Try to get DB
-      await this.getDB(z, x, y, storage, force);
-      //SQL request to DB
-      let sql = "SELECT s, b FROM t WHERE x = ? AND y = ?;";
-      //Request tile from DB
-      let results = await sqlite3.all(dbName, sql, [x, y]);
-      //If request to DB is finished
-      if(results) {
-        //If tile is missing in DB
-        if (results.length == 0) {
-          return false;
-        }
-        //If tile is present in DB
-        else {
-          return results[0];
-        }
+    //Try to get DB
+    await this.getDB(z, x, y, storage);
+    //SQL request to DB
+    let sql = "SELECT s, b FROM t WHERE x = ? AND y = ?;";
+    //Request tile from DB
+    let results = await sqlite3.all(dbName, sql, [x, y]);
+    //If request to DB is finished
+    if(results) {
+      //If tile is missing in DB
+      if (results.length == 0) {
+        return false;
       }
-      //If request return undefined state
+      //If tile is present in DB
       else {
-        //Make log
-        Log.make("error", "DB", "request problem in " + dbName);
-        //Set DB open mode to force
-        force = true;
+        return results[0];
       }
+    }
+    //If request return undefined state
+    else {
+      //Make log
+      Log.make("error", "DB", "request problem in " + dbName);
+      //Set DB open mode to force
+      return false;
     }
   }
   //----------------------------------------------------------------------------
@@ -174,51 +169,47 @@ class DB {
   async saveTile(z, x, y, storage, blob, size, mapVersion = 0) {
     //Получаем полный путь к базе
     let dbName = await this.getDBName(z, x, y, storage);
-    //Устанавливаем, что базу не нужно открывать принудительно
-    let force = false;
-    //Запускаем цикл
-    while(true) {
-      //Получаем дескриптор базы данных
-      let objDB = await this.getDB(z, x, y, storage, force);
-      //Получаем время запроса
-      let timeStamp = await this.time();
-      //Заносим изображение в базу
-      let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]);
-      //Если запрос вернул результат
-      if(results) {
-        Log.make("success", "DB", "INSERT -> " + dbName);
-        return true;
-      }
-      //Если запрос вернул пустой результат, значит база была закрыта
-      else {
-        Log.make("error", "DB", "INSERT -> " + dbName);
-        //Устанавливаем что базу нужно открыть в принудительном порядке
-        force = true;
-        return false;
-      }
+    //Open/Create DB
+    await this.getDB(z, x, y, storage);
+    //Получаем время запроса
+    let timeStamp = await this.time();
+    //Заносим изображение в базу
+    let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]);
+    //Если запрос вернул результат
+    if(results) {
+      Log.make("success", "DB", "INSERT -> " + dbName);
+      return true;
+    }
+    //Если запрос вернул пустой результат, значит база была закрыта
+    else {
+      Log.make("error", "DB", "INSERT -> " + dbName);
+      //Устанавливаем что базу нужно открыть в принудительном порядке
+      return false;
     }
   }
   //----------------------------------------------------------------------------
   //Update tile in DB
   //----------------------------------------------------------------------------
   async updateTile(z, x, y, storage, blob, size, mapVersion = 0) {
-    //Получаем полный путь к базе
+    //Get folder + file name of DB
     let dbName = await this.getDBName(z, x, y, storage);
-    //Устанавливаем, что базу не нужно открывать принудительно
-    let force = false;
-    //Получаем дескриптор базы данных
-    let objDB = await this.getDB(z, x, y, storage, force);
-    //Получаем время запроса
+    //Open/Create DB
+    await this.getDB(z, x, y, storage);
+    //Get current UNIX Timestamp
     let timeStamp = await this.time();
     //Get tile from DB
     let tile = await this.getTile(z, x, y, storage);
-    //If tile present in DB
+    //Reset result state
     let results = false;
+    //If tile present in DB
     if(tile !== false) {
       //Update tile in DB
       results = await sqlite3.run(dbName, "UPDATE t SET v = ?, s = ?, h = ?, d = ?, b = ? WHERE x = ? AND y = ?;", [mapVersion, parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob, x, y,]);
+      //If request to DB return true state
       if(results) {
+        //Make log
         Log.make("success", "DB", "UPDATE -> " + dbName);
+        //Return
         return true;
       }
     }
@@ -227,13 +218,14 @@ class DB {
       //Insert tile in DB
       results = await this.saveTile(z, x, y, storage, blob, size, mapVersion);
     }
-    //Если запрос вернул результат
+    //If request to DB return false state
     if(results === false) {
-      //Выводим сообщение
+      //Make log
       Log.make("error", "DB", "UPDATE -> " + dbName);
       //Return error
       return false;
     }
+    //If request to DB return true state
     else {
       return true;
     }
@@ -242,34 +234,44 @@ class DB {
   //Service function to close DB file when reach iddle time out
   //----------------------------------------------------------------------------
   async service() {
-    let dbTimeOpen = 0;
-    let db = '';
     //Run neverended cycle
     while(true) {
       //Go throught DB list
       for (let [key, value] of Object.entries(this.arrDB)) {
         //Check last DB query time
-        dbTimeOpen = Math.floor(Date.now() / 1000) - value.time;
+        let dbTimeOpen = Math.floor(Date.now() / 1000) - value.time;
         //If last query time more then iddle time settings
         if(dbTimeOpen > config.db.OpenTime && this.arrDB[key]['state'] == "open") {
           //Close DB
-          await sqlite3.close(value.name);
-          Log.make("info", "DB", "CLOSE -> " + value.name);
+          let result = await sqlite3.close(value.name);
+          //If DB closed
+          if(result) {
+            //Make log
+            Log.make("info", "DB", "CLOSE -> " + value.name);
+          }
+          //If some error during closing DB
+          else {
+            //Make log
+            Log.make("error", "DB", "CLOSE -> " + value.name);
+          }
+          //Set DB close state
           this.arrDB[key]['state'] = "closed";
+          //Decrease DB counter
           this.dbOpened--;
         }
       }
+      //Run function each 5 seconds
       await wait(5000);
     }
   }
   //----------------------------------------------------------------------------
-  //Функция возвращающая количество открытых баз в текущий момент
+  //Return counter of opened DB
   //----------------------------------------------------------------------------
   async getDBCounter() {
     return this.dbOpened;
   }
   //----------------------------------------------------------------------------
-  //Функция возвращающая текущий TIMESTAMP
+  //UNIX TIMESTAMP
   //----------------------------------------------------------------------------
   async time() {
     return parseInt(new Date().getTime()/1000)

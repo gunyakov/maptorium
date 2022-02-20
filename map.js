@@ -12,6 +12,10 @@ const db = new DB();
 //------------------------------------------------------------------------------
 let Log = require('./log.js');
 //------------------------------------------------------------------------------
+//Wait function
+//------------------------------------------------------------------------------
+let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+//------------------------------------------------------------------------------
 //General map handler
 //------------------------------------------------------------------------------
 class Map {
@@ -49,6 +53,8 @@ class Map {
         }
         //If tile is missing in DB
         else {
+          //Wait delay in config to prevent server request overloading
+          await wait(config.request.delay);
           //Try to get tile from server
           tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
           //If received tile from server or 404 code
@@ -99,6 +105,8 @@ class Map {
       //Internet mode
       //------------------------------------------------------------------------
       case "force":
+        //Wait delay in config to prevent server request overloading
+        await wait(config.request.delay);
         //Try to get tile from server
         tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
         //If received tile from server

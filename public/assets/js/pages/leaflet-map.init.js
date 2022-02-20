@@ -3,7 +3,11 @@
 //------------------------------------------------------------------------------
 $(document).ready(() => {
   //$("#map").css("top", $(".topnav").height());
-  $("#map").height($(window).height() - $(".topnav").height());
+  $("#map").height($(document).height() - $(".topnav").height());
+});
+$( window ).resize(() => {
+  //$("#map").css("top", $(".topnav").height());
+  $("#map").height($(document).height() - $(".topnav").height());
 });
 //------------------------------------------------------------------------------
 //Socket IO
@@ -13,9 +17,7 @@ let socket = io();
 //Init Map
 //------------------------------------------------------------------------------
 //let map = L.map('map').setView([20, 80], 7);
-let map = L.map('map', {
-    renderer: L.canvas()
-}).setView([20, 80], 7);
+let map = L.map('map').setView([20, 80], 7);
 //------------------------------------------------------------------------------
 //Default style for geometry
 //------------------------------------------------------------------------------
@@ -246,8 +248,7 @@ socket.on("setMapList", (data) => {
 		}
 	}
   $("#maps-list").html(mapsHtml);
-  cachedMap = L.tileLayer('cachedMap?z={z}&x={x}&y={y}');
-  cachedMap.addTo(map);
+  CachedMap.bringToFront();
 });
 
 function changeMap(mapID) {
@@ -283,10 +284,11 @@ let saveButton = false;
 //Recived geometry list from server
 //------------------------------------------------------------------------------
 socket.on("setGeometry", (geometry) => {
+  console.log(geometry);
   for(i = 0; i < geometry.length; i++) {
     var latlngs = [];
     for(a = 0; a < geometry[i].points.length; a++) {
-      latlngs.push(map.unproject(L.point(geometry[i]['points'][a]['x'], geometry[i]['points'][a]['y'])));
+      latlngs.push(map.unproject(L.point(geometry[i]['points'][a]['x'], geometry[i]['points'][a]['y']), geometry[i]['zoom']));
     }
     let workingGeometry = '';
     switch(geometry[i]['type']) {
@@ -369,8 +371,8 @@ socket.on("setGeometry", (geometry) => {
 //------------------------------------------------------------------------------
 //Tiled cached map
 //------------------------------------------------------------------------------
-let CachedMap = L.cachedgrid();
-CachedMap.onAdd(map);
+let CachedMap = L.cachedmap();
+CachedMap.addTo(map);
 //map.addLayer(CachedMap);
 function showTileCachedMap(e) {
   socket.emit("getTileCachedMap", {ID: e.relatedTarget.maptoriumID});

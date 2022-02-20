@@ -1,5 +1,9 @@
 # maptorium
 
+### Help me pls
+
+I'm looking for good html coder and who know leaflet library/how to write leaflet plugins very well to fully rewrite User UI and add a lot of futures inside.
+
 ## Tile Map Downloader
 
 ### Description
@@ -55,6 +59,7 @@ Next futures to add:
 
 Very early version 0.5.0. Under heavy development
 
+13.02.2022 - Basic geometry editing function (Leaflet geoman plugin). Organize DB for storing all geometry. Basic tile cached map.
 01.02.2022 - Full UI remastering. Now use profesional HTML theme. Jobs list, Job status bar, Tiles Grid, etc.
 
 29.01.2022 - Add yandex sat map, some errors resolve, UI dynamicaly get maps list from server
