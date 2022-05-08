@@ -2,9 +2,9 @@ let config = {
   //Service
   service: {
     //Listen port
-    port: 9000,
+    port: 9009,
     //Threads for http request
-    threads: 4,
+    threads: 2,
   },
   //Request for mass tile download
   request: {
@@ -21,13 +21,13 @@ let config = {
   },
   network: {
     //(enable, disable, force)
-    state: "enable"
+    state: "disable"
   },
   proxy: {
     //Use proxy or not (true or false)
-    enable: true,
+    enable: false,
     //Enable tor change ID
-    tor: true,
+    tor: false,
     //Type of proxy(socks, socks4, socks5, http, https)
     protocol: "http",
     //Host can be IP or domain
@@ -50,28 +50,28 @@ let config = {
     //How many entries keep in logs
     length: 20,
     DB: {
-      success: true,
+      success: false,
       info: true,
       error: true,
       warning: true
     },
     MAP: {
-      success: true,
+      success: false,
       info: true,
       error: true,
       warning: true
     },
     SQLITE3: {
-      success: true,
+      success: false,
       info: false,
       error: true,
       warning: true
     },
     HTTP: {
-      success: true,
+      success: false,
       info: false,
       error: true,
-      warning: true
+      warning: false
     },
     GPS: {
       success: true,

@@ -2,11 +2,11 @@
 //------------------------------------------------------------------------------
 //Config
 //------------------------------------------------------------------------------
-let config = require('./config');
+let config = require(__dirname + '/config.js');
 //------------------------------------------------------------------------------
 //Statistics
 //------------------------------------------------------------------------------
-let stat = require('./statistics');
+let stat = require(__dirname + '/src/statistics.js');
 //------------------------------------------------------------------------------
 //MD5 to hashed tile names
 //------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 //------------------------------------------------------------------------------
 //Cached tile map
 //------------------------------------------------------------------------------
-const CachedMap = require('./cachedmap');
+//const CachedMap = require('./cachedmap');
 //------------------------------------------------------------------------------
 //Express with socket io
 //------------------------------------------------------------------------------
@@ -33,12 +33,17 @@ const io = new Server(httpServer, { /* options */ });
 //------------------------------------------------------------------------------
 //Logging service
 //------------------------------------------------------------------------------
-let log = require('./log.js');
+let log = require(__dirname + "/src/log.js");
 const Log = new log();
+//------------------------------------------------------------------------------
+//Logging service
+//------------------------------------------------------------------------------
+let gps = require(__dirname + "/src/gps.js");
+const Gps = new gps(io);
 //------------------------------------------------------------------------------
 //Geometry handler
 //------------------------------------------------------------------------------
-let geometry = require("./geometry");
+let geometry = require(__dirname + "/src/geometry");
 const Geometry = new geometry();
 //------------------------------------------------------------------------------
 //Some vars for service
@@ -311,8 +316,10 @@ async function tilesService(threadNumber) {
 //------------------------------------------------------------------------------
 //Socket comunication with client
 //------------------------------------------------------------------------------
-io.on('connection', function(socket){
+io.on('connection', async function(socket){
   Log.make("info", "MAIN", "User connected by socket.io");
+  let points = await Geometry.routeGetHistory()
+  socket.emit("routeHistory", points);
   socket.on("stat", () => {
     socket.emit("stat", stat);
   });
@@ -324,11 +331,11 @@ io.on('connection', function(socket){
     //Reset map info array
     let arrMapInfo = [];
     //Get list of files
-    let mapsList = fs.readdirSync("./maps");
+    let mapsList = fs.readdirSync(__dirname + "/maps");
     //Walk files list
     for(i = 0; i < mapsList.length; i++) {
       //Require module of map handler
-      let map = require("./maps/" + mapsList[i]);
+      let map = require(__dirname + "/maps/" + mapsList[i]);
       //Init map handler
       map = new map();
       let mapInfo = await map.getInfo();
@@ -451,18 +458,18 @@ let currentJob = {};
   //----------------------------------------------------------------------------
   //Check proxy settings during start
   //----------------------------------------------------------------------------
-  let httpEngine = require("./http-engine");
-  await httpEngine.checkProxy();
+  let httpEngine = require(__dirname + "/src/http-engine");
+  await httpEngine.checkProxy(config);
 
   const fs = require('fs');
   //Reset map info array
   let arrMapInfo = [];
   //Get list of files
-  let mapsList = fs.readdirSync("./maps");
+  let mapsList = fs.readdirSync(__dirname + "/maps");
   //Walk files list
   for(i = 0; i < mapsList.length; i++) {
     //Require module of map handler
-    let map = require("./maps/" + mapsList[i]);
+    let map = require(__dirname + "/maps/" + mapsList[i]);
     //Init map handler
     map = new map();
     let mapInfo = await map.getInfo();
@@ -484,7 +491,7 @@ let currentJob = {};
   //----------------------------------------------------------------------------
   while(true) {
     //Whait second
-    await wait(1000);
+    await wait(5000);
     //If job tile list empty and job list isnt
     if(arrJobTilesList.length == 0 && arrJobList.length > 0) {
       //If first job in list already downloaded

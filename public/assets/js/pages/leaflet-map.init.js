@@ -32,7 +32,127 @@ map.pm.setPathOptions({
   fillColor: fillColor,
   fillOpacity: fillOpacity,
 });
+//------------------------------------------------------------------------------
+//Marker
+//------------------------------------------------------------------------------
+var ship16 = L.icon({
+	iconUrl : 'assets/images/Container-Ship-Top-Red-icon16.png',
+	iconRetinaUrl : 'my-icon@2x.png',
+	iconSize : [16, 16],
+	iconAnchor : [8, 8],
+});
+var ship24 = L.icon({
+	iconUrl : 'assets/images/Container-Ship-Top-Red-icon24.png',
+	iconRetinaUrl : 'my-icon@2x.png',
+	iconSize : [24, 24],
+	iconAnchor : [12, 12],
+});
 
+var ship32 = L.icon({
+	iconUrl : 'assets/images/Container-Ship-Top-Red-icon32.png',
+	iconRetinaUrl : 'my-icon@2x.png',
+	iconSize : [32, 32],
+	iconAnchor : [18, 18],
+});
+
+var ship48 = L.icon({
+	iconUrl : 'assets/images/Container-Ship-Top-Red-icon48.png',
+	iconRetinaUrl : 'my-icon@2x.png',
+	iconSize : [48, 48],
+	iconAnchor : [24, 24],
+});
+
+var marker = new L.marker([50.5, 30.5], {
+	icon : ship16,
+	iconAngle : 90
+});
+map.addLayer(marker);
+
+//------------------------------------------------------------------------------
+//Work with GPS data update
+//------------------------------------------------------------------------------
+var points = new Array();
+var polyLinePoints = new Array();
+var polyline;
+
+socket.on("routeHistory", (data) => {
+  console.log("routeHistory", data);
+  for(i = 0; i < data.length; i++) {
+    var latlng = L.latLng(data[i]["lat"], data[i]["lon"]);
+    polyLinePoints.unshift(latlng);
+  }
+  polyline = new L.polyline(polyLinePoints, {
+    weight : 1,
+    color : '#932402'
+  });
+  map.addLayer(polyline);
+});
+
+socket.on("gpsData", (data) => {
+  console.log(data);
+  var latlng = L.latLng(data["lat_decimal"], data["lon_decimal"]);
+
+  $("#speed").text("Ship`s speed: " + data['sog'] + " kn.");
+
+  marker.setLatLng(latlng);
+  marker.setIconAngle(data['dir'] + 90);
+
+  polyLinePoints.unshift(latlng);
+
+  if(polyLinePoints.length > 2) {
+    polyline.addLatLng(latlng);
+  }
+});
+//------------------------------------------------------------------------------
+//Add info table for map
+//------------------------------------------------------------------------------
+var MyControl2 = L.Control.extend({
+  options : {
+    position : 'bottomleft'
+  },
+
+  onAdd : function(map) {
+    // create the control container with a particular class name
+    var container = L.DomUtil.get('routeInfo');
+    // ... initialize other DOM elements, add listeners, etc.
+
+    return container;
+  }
+});
+map.addControl(new MyControl2());
+//------------------------------------------------------------------------------
+//Update icon size in accordance with map zoom level
+//------------------------------------------------------------------------------
+map.on('zoomend', function() {
+  if (map.getZoom() <= 4) {
+    marker.setIcon(ship16);
+    //polyline.setStyle({
+     // weight : 1,
+      //color : '#932402'
+    //});
+  }
+  if (map.getZoom() > 4 && map.getZoom() <= 7) {
+    marker.setIcon(ship24);
+    //polyline.setStyle({
+    //  weight : 2,
+    //  color : '#932402'
+    //});
+  }
+  if (map.getZoom() > 7 && map.getZoom() <= 10) {
+    marker.setIcon(ship32);
+    //polyline.setStyle({
+    //  weight : 3,
+    //  color : '#932402'
+    //});
+  }
+  if (map.getZoom() > 10) {
+    marker.setIcon(ship48);
+    //polyline.setStyle({
+    //  weight : 4,
+    //  color : '#932402'
+    //});
+  }
+});
 
 //L.PM.setOptIn(true);
 map.pm.addControls({

@@ -1,16 +1,12 @@
 //------------------------------------------------------------------------------
-//Config
-//------------------------------------------------------------------------------
-let config = require('./config');
-//------------------------------------------------------------------------------
 //DB handler
 //------------------------------------------------------------------------------
-const DB = require("./db.js");
+const DB = require(__dirname + "/db.js");
 const db = new DB();
 //------------------------------------------------------------------------------
 //Log
 //------------------------------------------------------------------------------
-let Log = require('./log.js');
+let Log = require(__dirname + '/log.js');
 //------------------------------------------------------------------------------
 //Wait function
 //------------------------------------------------------------------------------
@@ -21,9 +17,10 @@ let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 class Map {
 
   constructor(){
-    this.storage = __dirname;
+    this.storage = __dirname + "/../";
     this._mapVersion = 0;
-    this._httpEngine = require("./http-engine.js");
+    this._httpEngine = require(__dirname + "/http-engine.js");
+    this.config = require(__dirname + '/../config');
     this._log = new Log();
   }
   //----------------------------------------------------------------------------
@@ -39,7 +36,7 @@ class Map {
     //Reset tile info
     let tile = "";
     //Switch of network state
-    switch (config.network.state) {
+    switch (this.config.network.state) {
       //------------------------------------------------------------------------
       //Internet & Cache mode
       //------------------------------------------------------------------------
@@ -54,13 +51,13 @@ class Map {
         //If tile is missing in DB
         else {
           //Wait delay in config to prevent server request overloading
-          await wait(config.request.delay);
+          await wait(this.config.request.delay);
           //Try to get tile from server
-          tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
+          tile = await this._httpEngine.get(url, this.config, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
           //If received tile from server or 404 code
           if(tile && tile != 404) {
             //If enable to write into DB
-            if(config.db.ReadOnly === false) {
+            if(this.config.db.ReadOnly === false) {
               //Insert tile into DB
               await db.saveTile(z, x, y, this.storage, tile.data, tile.data.byteLength, this._mapVersion);
             }
@@ -106,13 +103,13 @@ class Map {
       //------------------------------------------------------------------------
       case "force":
         //Wait delay in config to prevent server request overloading
-        await wait(config.request.delay);
+        await wait(this.config.request.delay);
         //Try to get tile from server
-        tile = await this._httpEngine.get(url, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
+        tile = await this._httpEngine.get(url, this.config, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
         //If received tile from server
         if(tile && tile != 404) {
           //If enable to write into DB
-          if(config.db.ReadOnly === false) {
+          if(this.config.db.ReadOnly === false) {
             //Insert or update tile in DB
             await db.updateTile(z, x, y, this.storage, tile.data, tile.data.byteLength, this._mapVersion);
           }

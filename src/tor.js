@@ -1,5 +1,5 @@
 const net = require('net');
-const config = require('./config');
+const config = require(__dirname + '/../config');
 let util = require('util');
 
 class TorService {

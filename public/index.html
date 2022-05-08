@@ -204,6 +204,20 @@
             <div class="main-content">
               <div id="map" class="leaflet-map" ></div>
               <table id="bar"><tr><td id="mZ" style="width:18px">N/A</td><td id="mQue" width="100px">&nbsp;Queue: 0&nbsp;</td><td id="mDownload" width="180px">&nbsp;Downloaded 0 (0,0kB) </td><td id='mCoords'>Coords will be there</td></tr></table>
+              <table id='routeInfo' style="width: 350px; background-color: #5A647E; opacity: 0.8; border-style:solid; border-width: 2px; border-radius: 5px">
+          			<tr>
+          				<td style="width: 110px;">Distance run:</td>
+          				<td id='curDistance'>12</td>
+          			</tr>
+          			<tr>
+          				<td>Distance to go:</td>
+          				<td id='leaveDistance'>0</td>
+          			</tr>
+          			<tr>
+          				<td>Time to go:</td>
+          				<td id='timeToGo'>0</td>
+          			</tr>
+          		</table>
             </div>
             <!-- end main content-->
 
@@ -370,6 +384,7 @@
 
         <script src="assets/libs/apexcharts/apexcharts.min.js"></script>
         <script src="assets/libs/leaflet/leaflet.js"></script>
+        <script src="assets/libs/leaflet/Marker.Rotate.js"></script>
         <script src="assets/libs/leaflet/leaflet-geoman.min.js"></script>
         <!-- leaflet map.init -->
         <script src="assets/js/pages/leaflet-us-states.js"></script>

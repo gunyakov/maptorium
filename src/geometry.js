@@ -1,16 +1,16 @@
 //------------------------------------------------------------------------------
 //Config
 //------------------------------------------------------------------------------
-let config = require('./config');
+let config = require(__dirname + '/../config.js');
 //------------------------------------------------------------------------------
 //DB handler
 //------------------------------------------------------------------------------
-let sqlite3 = require('./sqlite3-promise.js');
+let sqlite3 = require(__dirname + '/sqlite3-promise.js');
 sqlite3 = new sqlite3();
 //------------------------------------------------------------------------------
 //Log
 //------------------------------------------------------------------------------
-let log = require('./log');
+let log = require(__dirname + '/log.js');
 const Log = new log();
 //------------------------------------------------------------------------------
 //Wait function
@@ -26,7 +26,7 @@ let pointInPolygon = require('point-in-polygon');
 class Geometry {
 
   constructor(){
-    this._dbName = __dirname + "/Marks.db3";
+    this._dbName = __dirname + "/../Marks.db3";
     this.time = Math.floor(Date.now() / 1000);
     this.state = "close";
     this.service();
@@ -46,7 +46,6 @@ class Geometry {
   async get(ID = 0) {
     await this.open();
     let result = false;
-    let responce = [];
     if(ID == 0) {
       result = await sqlite3.all(this._dbName, "SELECT * FROM geometry;", []).catch((error) => {Log.make("error", "DB", error)  });
     }
@@ -55,6 +54,7 @@ class Geometry {
     }
     if(result.length > 0) {
       let points = false;
+      let responce = [];
       for(i = 0; i < result.length; i++) {
         points = await sqlite3.all(this._dbName, "SELECT * FROM points WHERE geometryID = ?;", [result[i]['ID']]).catch((error) => {Log.make("error", "DB", error)  });
         if(points && points.length > 0) {
@@ -141,6 +141,36 @@ class Geometry {
     await this.savePoints(geometry.ID, geometry.type, geometry.coords);
     //Exit
     return;
+  }
+
+  async routeAddRoute(name) {
+
+  }
+
+  async routeAddPoint(lat, lng) {
+    if(lat > 0 && lng > 0) {
+      let SQL = "INSERT INTO routeCoords('routeID', 'lat', 'lon', 'date') VALUES(1, ?, ?, 'unixepoch')";
+      //Open DB (if not yet opened)
+      await this.open();
+	  Log.make("info", "DB", "INSERT -> " + this._dbName);
+      await sqlite3.run(this._dbName, SQL, [lat, lng]).catch((error) => {Log.make("error", "DB", error) });
+    }
+  }
+
+  async routeGetHistory() {
+    await this.open();
+    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeCoords ORDER BY ID;", []).catch((error) => {Log.make("error", "DB", error)  });
+    if(result.length > 0) {
+      let points = false;
+      let response = [];
+      for(i = 0; i < result.length; i++) {
+        response.push(result[i]);
+      }
+      return response;
+    }
+    else {
+      return false;
+    }
   }
   //----------------------------------------------------------------------------
   //Service function to close DB file when reach iddle time out
