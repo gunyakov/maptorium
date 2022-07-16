@@ -1,5 +1,5 @@
 /*
- * Based on comments by @runanet and @coomsie 
+ * Based on comments by @runanet and @coomsie
  * https://github.com/CloudMade/Leaflet/issues/386
  *
  * Wrapping function is needed to preserve L.Marker.update function
@@ -8,11 +8,9 @@
 	var _old__setPos = L.Marker.prototype._setPos;
 	L.Marker.include({
 		_updateImg: function(i, a, s) {
-			a = L.point(s).divideBy(2)._subtract(L.point(a));
 			var transform = '';
-			transform += ' translate(' + -a.x + 'px, ' + -a.y + 'px)';
-			transform += ' rotate(' + this.options.iconAngle + 'deg)';
-			transform += ' translate(' + a.x + 'px, ' + a.y + 'px)';
+			transform += ' transform-origin: ' + a[0] + 'px ' + a[1] + 'px;';
+			transform += ' rotate(' + this.options.iconAngle + 'deg);';
 			i.style[L.DomUtil.TRANSFORM] += transform;
 		},
 

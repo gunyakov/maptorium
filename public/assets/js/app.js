@@ -1,211 +1,221 @@
-!(function (a) {
-    "use strict";
-    var e,
-        t,
-        n,
-        o = localStorage.getItem("minia-language"),
-        r = "en";
-    function i(t) {
-        document.getElementById("header-lang-img") &&
-            ("en" == t
-                ? (document.getElementById("header-lang-img").src = "assets/images/flags/us.jpg")
-                : "sp" == t
-                ? (document.getElementById("header-lang-img").src = "assets/images/flags/spain.jpg")
-                : "gr" == t
-                ? (document.getElementById("header-lang-img").src = "assets/images/flags/germany.jpg")
-                : "it" == t
-                ? (document.getElementById("header-lang-img").src = "assets/images/flags/italy.jpg")
-                : "ru" == t && (document.getElementById("header-lang-img").src = "assets/images/flags/russia.jpg"),
-            localStorage.setItem("minia-language", t),
-            null == (o = localStorage.getItem("minia-language")) && i(r),
-            a.getJSON("assets/lang/" + o + ".json", function (t) {
-                a("html").attr("lang", o),
-                    a.each(t, function (t, e) {
-                        "head" === t && a(document).attr("title", e.title), a("[data-key='" + t + "']").text(e);
-                    });
-            }));
-    }
-    function d() {
-        var t = document.querySelectorAll(".counter-value");
-        t.forEach(function (o) {
-            !(function t() {
-                var e = +o.getAttribute("data-target"),
-                    a = +o.innerText,
-                    n = e / 250;
-                n < 1 && (n = 1), a < e ? ((o.innerText = (a + n).toFixed(0)), setTimeout(t, 1)) : (o.innerText = e);
-            })();
-        });
-    }
-    function l() {
-        for (var t = document.getElementById("topnav-menu-content").getElementsByTagName("a"), e = 0, a = t.length; e < a; e++)
-            t[e] &&
-                t[e].parentElement &&
-                "nav-item dropdown active" === t[e].parentElement.getAttribute("class") &&
-                (t[e].parentElement.classList.remove("active"), t[e].nextElementSibling && t[e].nextElementSibling.classList.remove("show"));
-    }
-    function s(t) {
-        document.getElementById(t).checked = !0;
-    }
-    function c() {
-        document.webkitIsFullScreen || document.mozFullScreen || document.msFullscreenElement || a("body").removeClass("fullscreen-enable");
-    }
-    a("#side-menu").metisMenu(),
-        d(),
-        (e = document.body.getAttribute("data-sidebar-size")),
-        a(window).on("load", function () {
-            a(".switch").on("switch-change", function () {
-                toggleWeather();
-            }),
-                1024 <= window.innerWidth && window.innerWidth <= 1366 && (document.body.setAttribute("data-sidebar-size", "sm"));
-        }),
-        a("#vertical-menu-btn").on("click", function (t) {
-            t.preventDefault(),
-                a("body").toggleClass("sidebar-enable"),
-                992 <= a(window).width() &&
-                    (null == e
-                        ? null == document.body.getAttribute("data-sidebar-size") || "lg" == document.body.getAttribute("data-sidebar-size")
-                            ? document.body.setAttribute("data-sidebar-size", "sm")
-                            : document.body.setAttribute("data-sidebar-size", "lg")
-                        : "md" == e
-                        ? "md" == document.body.getAttribute("data-sidebar-size")
-                            ? document.body.setAttribute("data-sidebar-size", "sm")
-                            : document.body.setAttribute("data-sidebar-size", "md")
-                        : "sm" == document.body.getAttribute("data-sidebar-size")
-                        ? document.body.setAttribute("data-sidebar-size", "lg")
-                        : document.body.setAttribute("data-sidebar-size", "sm"));
-        }),
-        a("#sidebar-menu a").each(function () {
-            var t = window.location.href.split(/[?#]/)[0];
-            this.href == t &&
-                (a(this).addClass("active"),
-                a(this).parent().addClass("mm-active"),
-                a(this).parent().parent().addClass("mm-show"),
-                a(this).parent().parent().prev().addClass("mm-active"),
-                a(this).parent().parent().parent().addClass("mm-active"),
-                a(this).parent().parent().parent().parent().addClass("mm-show"),
-                a(this).parent().parent().parent().parent().parent().addClass("mm-active"));
-        }),
-        a(document).ready(function () {
-            var t;
-            0 < a("#sidebar-menu").length &&
-                0 < a("#sidebar-menu .mm-active .active").length &&
-                300 < (t = a("#sidebar-menu .mm-active .active").offset().top) &&
-                ((t -= 300), a(".vertical-menu .simplebar-content-wrapper").animate({ scrollTop: t }, "slow"));
-        }),
-        a(".navbar-nav a").each(function () {
-            var t = window.location.href.split(/[?#]/)[0];
-            this.href == t &&
-                (a(this).addClass("active"),
-                a(this).parent().addClass("active"),
-                a(this).parent().parent().addClass("active"),
-                a(this).parent().parent().parent().addClass("active"),
-                a(this).parent().parent().parent().parent().addClass("active"),
-                a(this).parent().parent().parent().parent().parent().addClass("active"),
-                a(this).parent().parent().parent().parent().parent().parent().addClass("active"));
-        }),
-        a('[data-toggle="fullscreen"]').on("click", function (t) {
-            t.preventDefault(),
-                a("body").toggleClass("fullscreen-enable"),
-                document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement
-                    ? document.cancelFullScreen
-                        ? document.cancelFullScreen()
-                        : document.mozCancelFullScreen
-                        ? document.mozCancelFullScreen()
-                        : document.webkitCancelFullScreen && document.webkitCancelFullScreen()
-                    : document.documentElement.requestFullscreen
-                    ? document.documentElement.requestFullscreen()
-                    : document.documentElement.mozRequestFullScreen
-                    ? document.documentElement.mozRequestFullScreen()
-                    : document.documentElement.webkitRequestFullscreen && document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-        }),
-        document.addEventListener("fullscreenchange", c),
-        document.addEventListener("webkitfullscreenchange", c),
-        document.addEventListener("mozfullscreenchange", c),
-        (function () {
-            if (document.getElementById("topnav-menu-content")) {
-                for (var t = document.getElementById("topnav-menu-content").getElementsByTagName("a"), e = 0, a = t.length; e < a; e++)
-                    t[e].onclick = function (t) {
-                        t && t.target && "#" === t.target.getAttribute("href") && (t.target.parentElement.classList.toggle("active"), t.target.nextElementSibling && t.target.nextElementSibling.classList.toggle("show"));
-                    };
-                window.addEventListener("resize", l);
-            }
-        })(),
-        [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).map(function (t) {
-            return new bootstrap.Tooltip(t);
-        }),
-        [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]')).map(function (t) {
-            return new bootstrap.Popover(t);
-        }),
-        [].slice.call(document.querySelectorAll(".toast")).map(function (t) {
-            return new bootstrap.Toast(t);
-        }),
-        window.sessionStorage && ((t = sessionStorage.getItem("is_visited")) ? a("#" + t).prop("checked", !0) : sessionStorage.setItem("is_visited", "layout-ltr")),
-        o && "null" != o && o !== r && i(o),
-        a(".language").on("click", function (t) {
-            i(a(this).attr("data-lang"));
-        }),
-        a(window).on("load", function () {
-            a("#status").fadeOut(), a("#preloader").delay(350).fadeOut("slow");
-        }),
-        (n = document.getElementsByTagName("body")[0]),
-        a(".right-bar-toggle").on("click", function (t) {
-            a("body").toggleClass("right-bar-enabled");
-        }),
-        a("#mode-setting-btn").on("click", function (t) {
-            n.hasAttribute("data-layout-mode") && "dark" == n.getAttribute("data-layout-mode")
-                ? (document.body.setAttribute("data-layout-mode", "light"),
-                  document.body.setAttribute("data-topbar", "light"),
-                  document.body.setAttribute("data-sidebar", "light"),
-                  (n.hasAttribute("data-layout") && "horizontal" == n.getAttribute("data-layout")) || document.body.setAttribute("data-sidebar", "light"),
-                  s("topbar-color-light"),
-                  s("sidebar-color-light"),
-                  s("topbar-color-light"))
-                : (document.body.setAttribute("data-layout-mode", "dark"),
-                  document.body.setAttribute("data-topbar", "dark"),
-                  document.body.setAttribute("data-sidebar", "dark"),
-                  (n.hasAttribute("data-layout") && "horizontal" == n.getAttribute("data-layout")) || document.body.setAttribute("data-sidebar", "dark"),
-                  s("layout-mode-dark"),
-                  s("sidebar-color-dark"),
-                  s("topbar-color-dark"));
-        }),
-        a(document).on("click", "body", function (t) {
-            0 < a(t.target).closest(".right-bar-toggle, .right-bar").length || a("body").removeClass("right-bar-enabled");
-        }),
+//------------------------------------------------------------------------------
+//Additional functions
+//------------------------------------------------------------------------------
+function formatFileSize(bytes,decimalPoint) {
+   if(bytes == 0) return '0 Bytes';
+   var k = 1000,
+       dm = decimalPoint || 2,
+       sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+       i = Math.floor(Math.log(bytes) / Math.log(k));
+   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+function secondsToHms(d) {
+    d = Number(d);
+    var h = Math.floor(d / 3600);
+    var m = Math.floor(d % 3600 / 60);
+    var s = Math.floor(d % 3600 % 60);
 
+    var hDisplay = h > 0 ? h + (h == 1 ? " h, " : " hs, ") : "";
+    var mDisplay = m > 0 ? m + (m == 1 ? " m, " : " ms, ") : "";
+    var sDisplay = s > 0 ? s + (s == 1 ? " s" : " ss") : "";
+    return hDisplay + mDisplay + sDisplay;
+}
 
-        a("input[name='layout']").on("change", function () {
-            window.location.href = "vertical" == a(this).val() ? "index.html" : "layouts-horizontal.html";
-        }),
-        a("input[name='layout-mode']").on("change", function () {
-            "light" == a(this).val()
-                ? (document.body.setAttribute("data-layout-mode", "light"),
-                  document.body.setAttribute("data-topbar", "light"),
-                  document.body.setAttribute("data-sidebar", "light"),
-                  (n.hasAttribute("data-layout") && "horizontal" == n.getAttribute("data-layout")) || document.body.setAttribute("data-sidebar", "light"),
-                  s("topbar-color-light"),
-                  s("sidebar-color-light"))
-                : (document.body.setAttribute("data-layout-mode", "dark"),
-                  document.body.setAttribute("data-topbar", "dark"),
-                  document.body.setAttribute("data-sidebar", "dark"),
-                  (n.hasAttribute("data-layout") && "horizontal" == n.getAttribute("data-layout")) || document.body.setAttribute("data-sidebar", "dark"),
-                  s("topbar-color-dark"),
-                  s("sidebar-color-dark"));
-        }),
-        a("input[name='layout-direction']").on("change", function () {
-            "ltr" == a(this).val()
-                ? (document.getElementsByTagName("html")[0].removeAttribute("dir"),
-                  document.getElementById("bootstrap-style").setAttribute("href", "assets/css/bootstrap.min.css"),
-                  document.getElementById("app-style").setAttribute("href", "assets/css/app.min.css"))
-                : (document.getElementById("bootstrap-style").setAttribute("href", "assets/css/bootstrap-rtl.min.css"),
-                  document.getElementById("app-style").setAttribute("href", "assets/css/app-rtl.min.css"),
-                  document.getElementsByTagName("html")[0].setAttribute("dir", "rtl"));
-        }),
-        Waves.init(),
-        a("#checkAll").on("change", function () {
-            a(".table-check .form-check-input").prop("checked", a(this).prop("checked"));
-        }),
-        a(".table-check .form-check-input").change(function () {
-            a(".table-check .form-check-input:checked").length == a(".table-check .form-check-input").length ? a("#checkAll").prop("checked", !0) : a("#checkAll").prop("checked", !1);
-        });
-})(jQuery),
-    feather.replace();
+$(document).ready(() => {
+  $("input[name='updateTiles']").on("click", () => {
+    if($("input[name='updateTiles']").is(":checked")) {
+      $("input[name='updateDifferent']").attr("disabled", false);
+      $("input[name='updateDateTile']").attr("disabled", false);
+      $("input[name='dateTile']").attr("disabled", false);
+    }
+    else {
+      $("input[name='updateDifferent']").attr("disabled", true);
+      $("input[name='updateDateTile']").attr("disabled", true);
+      $("input[name='dateTile']").attr("disabled", true);
+    }
+  });
+  $("input[name='checkEmptyTiles']").on("click", () => {
+    if($("input[name='checkEmptyTiles']").is(":checked")) {
+      $("input[name='updateDateEmpty']").attr("disabled", false);
+      $("input[name='dateEmpty']").attr("disabled", false);
+    }
+    else {
+      $("input[name='updateDateEmpty']").attr("disabled", true);
+      $("input[name='dateEmpty']").attr("disabled", true);
+    }
+  });
+
+  //------------------------------------------------------------------------------
+  //Send to server new job ORDER
+  //------------------------------------------------------------------------------
+  $("#startJob").on("click", function(e) {
+  	$("#jobModal").modal('hide');
+    let jobConfig = $("#jobForm").serialize();
+    console.log(jobConfig);
+    $.ajax({
+      url: "/job",
+      data: jobConfig,
+    });
+  	//socket.emit("jobAdd", jobConfig);
+  });
+
+  //------------------------------------------------------------------------------
+  //Request for jobs list on server
+  //------------------------------------------------------------------------------
+  socket.emit("getJobList");
+  socket.on("setJobList", (arrJobList) => {
+    console.log(arrJobList);
+    let jobHTML = "";
+    for(i = 0; i < arrJobList.length; i++) {
+      let zString = "";
+      for(let z = 4; z <= 20; z++) {
+        if(arrJobList[i]['z' + z]) {
+          zString += `z${z};`;
+        }
+      }
+      let color = `bg-soft-primary text-primary`;
+      if(i == 0) {
+        color = `bg-soft-success text-success`;
+      }
+      jobHTML += `<li class="activity-list">
+        <div class="activity-icon avatar-md">
+            <span class="avatar-title ${color} rounded-circle">
+            ${(i+1)}
+            </span>
+        </div>
+        <div class="d-flex">
+            <div class="flex-grow-1 overflow-hidden me-7">
+                <h5 class="font-size-14 mb-1">Polygon ID ${arrJobList[i]['polygonID']} ${zString}</h5>
+                <p class="text-truncate text-muted font-size-13">${arrJobList[i]['mapID']}</p>
+            </div>
+
+            <div class="flex-shrink-0 text-end">
+                <div class="dropdown">
+                    <a class="text-muted dropdown-toggle font-size-24" role="button" data-bs-toggle="dropdown" aria-haspopup="true">
+                        <i class="mdi mdi-dots-vertical"></i>
+                    </a>
+
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <a class="dropdown-item" href="#">Move UP</a>
+                        <a class="dropdown-item" href="#">Move DOWN</a>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="#">DELETE</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </li>`;
+    }
+    $("#jobsList").html(jobHTML);
+  });
+  //------------------------------------------------------------------------------
+  //Log handling section
+  //------------------------------------------------------------------------------
+  $('#errorLog').html('');
+  $('#infoLog').html('');
+  socket.on("log", (data) => {
+    console.log(data.type);
+    $("#mLog").html(data.message);
+    if(data.type == "error") {
+      $("#errorLog").append(`<p>${data.message}</p>`);
+    }
+    else {
+      $("#infoLog").append(`<p>${data.message}</p>`);
+    }
+  });
+  function getChartColorsArray(r) {
+      r = $(r).attr("data-colors");
+      return (r = JSON.parse(r)).map(function (r) {
+          r = r.replace(" ", "");
+          if (-1 == r.indexOf("--")) return r;
+          r = getComputedStyle(document.documentElement).getPropertyValue(r);
+          return r || void 0;
+      });
+  }
+
+  var radialchartColors = getChartColorsArray("#chart");
+
+  options = {
+      chart: {
+        height: 270,
+        type: "radialBar",
+        offsetY: -10
+      },
+      plotOptions: {
+          radialBar: {
+              startAngle: -130,
+              endAngle: 130,
+              dataLabels: {
+                  name: { show: 1 },
+                  value: {
+                      offsetY: 10,
+                      fontSize: "18px",
+                      color: void 0,
+                      formatter: function (r) {
+                          return r + "%";
+                      },
+                  },
+              },
+          },
+      },
+      colors: [radialchartColors[0]],
+      fill: { type: "gradient", gradient: { shade: "dark", type: "horizontal", gradientToColors: [radialchartColors[1]], shadeIntensity: 0.15, inverseColors: !1, opacityFrom: 1, opacityTo: 1, stops: [20, 60] } },
+      stroke: { dashArray: 4 },
+      legend: { show: !1 },
+      series: [50],
+      labels: ["10 GB"],
+      title: {
+        text: "Current download job",
+        style: {
+          fontSize:  '14px',
+          fontWeight:  'bold',
+          fontFamily:  undefined,
+          color:  '#000000'
+        },
+      }
+  };
+  let chart = new ApexCharts(document.querySelector("#chart"), options);
+  
+  chart.render();
+
+  socket.on("stat", (stat) => {
+    //console.log(stat);
+  	$("#mQue").html("&nbsp;Queue: " + stat.general.queue);
+  	$("#mDownload").html("&nbsp;Download " + stat.general.download + " (" + formatFileSize(stat.general.size, 2) + ")");
+    let proceedTiles = stat.job.download + stat.job.skip + stat.job.error + stat.job.empty;
+    let progress = Math.floor(proceedTiles / stat.job.total * 10000) / 100;
+    chart.updateOptions({
+      series: [progress],
+      labels: [formatFileSize(stat.job.size, 2)]
+    });
+
+    $("#statJobDownloadTiles").html(proceedTiles + " from " + stat.job.total);
+    $("#statJobErrorTiles").html("Error: " + stat.job.error);
+    $("#statJobEmptyTiles").html("Empty: " + stat.job.empty);
+    $("#statJobSkipTiles").html("Skip: " + stat.job.skip);
+    let ETA = stat.job.time / proceedTiles * stat.job.queue;
+    //console.log(stat.job);
+    //console.log(ETA);
+    ETA = secondsToHms(ETA / 1000);
+    $("#ETA").html(`ETA ${ETA}`);
+  });
+  //----------------------------------------------------------------------------
+  //Show stat from server
+  //----------------------------------------------------------------------------
+  socket.on("server-stat", (data) => {
+    $("#memoryUsage").html(data.memory.toFixed(2) + "Mb");
+    $("#cpuUsage").html(data.cpu);
+    $("#fsRead").html(data.fsRead);
+    $("#fsWrite").html(data.fsWrite);
+    $("sDownload").html(data.download + "Mb");
+    $("sQueue").html(data.queue);
+  });
+  $("#dashtoggle").collapse('hide');
+  n = document.body;
+  document.getElementById("right-bar-toggle").addEventListener("click", function(e) {
+    n.classList.toggle("right-bar-enabled");
+  });
+  n.addEventListener("click", function(e) {
+    !e.target.parentElement.classList.contains("right-bar-toggle-close") && e.target.closest(".right-bar-toggle, .right-bar") || document.body.classList.remove("right-bar-enabled");
+  });
+});

@@ -22,17 +22,6 @@ class ExtMap extends map {
     };
   }
 
-  async getTile(z, x, y) {
-    let tileUrl = await this.getURL(z, x, y);
-    let tile = await this.getTileMain(z, x, y, tileUrl);
-    if(tile) {
-      return tile;
-    }
-    else {
-      return false;
-    }
-  }
-
   async getURL(z, x, y) {
     let url = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`
     return url;

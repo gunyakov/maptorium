@@ -1,8 +1,4 @@
 //------------------------------------------------------------------------------
-//Config
-//------------------------------------------------------------------------------
-let config = require(__dirname + '/../config.js');
-//------------------------------------------------------------------------------
 //Color console
 //------------------------------------------------------------------------------
 let colors = require('colors');
@@ -47,6 +43,15 @@ class Log {
       //Show info message
       if(type == "info") {
         console.log(colors.blue(new Date().toLocaleString("en-GB")), colors.blue.bold(type.toUpperCase()), colors.blue.bold(module.toUpperCase()), colors.blue(message));
+      }
+      //Call callback, if registered
+      if(IO) {
+        let logData = {
+          type: type,
+          module: module,
+          message: message
+        }
+        IO.emit("log", logData);
       }
     }
   }

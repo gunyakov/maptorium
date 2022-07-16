@@ -1,33 +1,38 @@
 //------------------------------------------------------------------------------
 //DB handler
 //------------------------------------------------------------------------------
-const DB = require(__dirname + "/db.js");
+const DB = require("./db.js");
 const db = new DB();
-//------------------------------------------------------------------------------
-//Log
-//------------------------------------------------------------------------------
-let Log = require(__dirname + '/log.js');
-//------------------------------------------------------------------------------
-//Wait function
-//------------------------------------------------------------------------------
-let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 //------------------------------------------------------------------------------
 //General map handler
 //------------------------------------------------------------------------------
 class Map {
 
   constructor(){
-    this.storage = __dirname + "/../";
+    this.storage = process.mainModule.path;
     this._mapVersion = 0;
-    this._httpEngine = require(__dirname + "/http-engine.js");
-    this.config = require(__dirname + '/../config');
-    this._log = new Log();
+    this._httpEngine = require("./http-engine.js");
+    this.config = config;
   }
   //----------------------------------------------------------------------------
   //Return info of Map
   //----------------------------------------------------------------------------
   async getInfo() {
     return this._info;
+  }
+  //----------------------------------------------------------------------------
+  //
+  //----------------------------------------------------------------------------
+  async getTile(z, x, y) {
+    let tileUrl = await this.getURL(z, x, y);
+    Log.make("info", "HTTP", tileUrl);
+    let tile = await this.getTileMain(z, x, y, tileUrl);
+    if(tile) {
+      return tile;
+    }
+    else {
+      return false;
+    }
   }
   //----------------------------------------------------------------------------
   //Main tile handler
@@ -53,14 +58,11 @@ class Map {
           //Wait delay in config to prevent server request overloading
           await wait(this.config.request.delay);
           //Try to get tile from server
-          tile = await this._httpEngine.get(url, this.config, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
+          tile = await this._httpEngine.get(url, this.config, "arraybuffer").catch((error) => { Log.make("error", "MAP", error) });
           //If received tile from server or 404 code
           if(tile && tile != 404) {
-            //If enable to write into DB
-            if(this.config.db.ReadOnly === false) {
-              //Insert tile into DB
-              await db.saveTile(z, x, y, this.storage, tile.data, tile.data.byteLength, this._mapVersion);
-            }
+            //Insert tile into DB
+            await db.saveTile(z, x, y, this.storage, tile.data, tile.data.byteLength, this._mapVersion);
             //Format tile info
             tile = {
               b: tile.data,
@@ -75,14 +77,14 @@ class Map {
           else {
             if(tile == 404) {
               //Show error message
-              this._log.make("warning", "MAP", url);
+              Log.make("warning", "MAP", url);
+              await db.saveTile(z, x, y, this.storage, '', 0, this._mapVersion);
               //Return empty tile
               return 404;
             }
             else {
               //Show error message
-              this._log.make("error", "MAP", url);
-              await db.saveTile(z, x, y, this.storage, '', 0, this._mapVersion);
+              Log.make("error", "MAP", url);
               //Return false
               return false;
             }
@@ -105,7 +107,7 @@ class Map {
         //Wait delay in config to prevent server request overloading
         await wait(this.config.request.delay);
         //Try to get tile from server
-        tile = await this._httpEngine.get(url, this.config, "arraybuffer").catch((error) => { this._log.make("error", "MAP", error) });
+        tile = await this._httpEngine.get(url, this.config, "arraybuffer").catch((error) => { Log.make("error", "MAP", error) });
         //If received tile from server
         if(tile && tile != 404) {
           //If enable to write into DB
@@ -126,13 +128,13 @@ class Map {
         else {
           if(tile == 404) {
             //Show error message
-            this._log.make("warning", "MAP", url);
+            Log.make("warning", "MAP", url);
             //Return empty tile
             return 404;
           }
           else {
             //Show error message
-            this._log.make("error", "MAP", url);
+            Log.make("error", "MAP", url);
             //Return false
             return false;
           }

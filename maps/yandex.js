@@ -21,18 +21,6 @@ class ExtMap extends map {
     };
   }
 
-  async getTile(z, x, y) {
-    let tileUrl = await this.getURL(z, x, y);
-    this._log.make("info", "HTTP", tileUrl);
-    let tile = await this.getTileMain(z, x, y, tileUrl);
-    if(tile) {
-      return tile;
-    }
-    else {
-      return false;
-    }
-  }
-
   async getURL(z, x, y) {
     let rnd = await this.getRandomInt(4);
     let url = `https://core-sat.maps.yandex.net/tiles?l=sat&v=3.941.0&x=${x}&y=${y}&z=${z}&scale=1&lang=ru_RU`;

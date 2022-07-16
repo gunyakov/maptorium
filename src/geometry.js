@@ -1,21 +1,8 @@
 //------------------------------------------------------------------------------
-//Config
-//------------------------------------------------------------------------------
-let config = require(__dirname + '/../config.js');
-//------------------------------------------------------------------------------
 //DB handler
 //------------------------------------------------------------------------------
-let sqlite3 = require(__dirname + '/sqlite3-promise.js');
+let sqlite3 = require('./sqlite3-promise.js');
 sqlite3 = new sqlite3();
-//------------------------------------------------------------------------------
-//Log
-//------------------------------------------------------------------------------
-let log = require(__dirname + '/log.js');
-const Log = new log();
-//------------------------------------------------------------------------------
-//Wait function
-//------------------------------------------------------------------------------
-let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 //------------------------------------------------------------------------------
 //Checker tiles inside polygon or not
 //------------------------------------------------------------------------------
@@ -26,9 +13,11 @@ let pointInPolygon = require('point-in-polygon');
 class Geometry {
 
   constructor(){
-    this._dbName = __dirname + "/../Marks.db3";
+    this._dbName = process.mainModule.path + "/Marks.db3";
     this.time = Math.floor(Date.now() / 1000);
     this.state = "close";
+    this.routeID = false;
+    this.routeGetID();
     this.service();
   }
 
@@ -143,32 +132,88 @@ class Geometry {
     return;
   }
 
-  async routeAddRoute(name) {
-
+  async routeAddRoute(name = "New Route") {
+    //Open DB (if not yet opened)
+    await this.open();
+    let SQL = "INSERT INTO routeList('name', 'distance') VALUES(?, ?);";
+    await sqlite3.run(this._dbName, SQL, [name, 0]).catch((error) => {Log.make("error", "DB", error) });
+    await this.routeGetID();
+    Log.make("info", "DB", "INSERT -> " + this._dbName);
+    return true;
   }
 
   async routeAddPoint(lat, lng) {
-    if(lat > 0 && lng > 0) {
-      let SQL = "INSERT INTO routeCoords('routeID', 'lat', 'lon', 'date') VALUES(1, ?, ?, 'unixepoch')";
-      //Open DB (if not yet opened)
-      await this.open();
-	  Log.make("info", "DB", "INSERT -> " + this._dbName);
-      await sqlite3.run(this._dbName, SQL, [lat, lng]).catch((error) => {Log.make("error", "DB", error) });
+    if(lat != 0 && lng != 0) {
+      if(this.routeID) {
+        let SQL = "INSERT INTO routeCoords('routeID', 'lat', 'lon', 'date') VALUES(?, ?, ?, 'unixepoch')";
+        //Open DB (if not yet opened)
+        await this.open();
+        await sqlite3.run(this._dbName, SQL, [this.routeID, lat, lng]).catch((error) => {Log.make("error", "DB", error) });
+        Log.make("info", "DB", "INSERT -> " + this._dbName);
+      }
+      else {
+        Log.make("warning", "GEOMETRY", "RouteID is still empty. Skip adding route point ot DB.");
+      }
+    }
+    else {
+      Log.make("warning", "GEOMETRY", "One of coords is empty. Skip adding route point ot DB.");
     }
   }
 
-  async routeGetHistory() {
+  async routeGetHistory(ID = 0) {
+    //Open DB if closed
     await this.open();
-    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeCoords ORDER BY ID;", []).catch((error) => {Log.make("error", "DB", error)  });
+    //Get current route ID
+    let routeID = this.routeID;
+    //If need to get history of route
+    if(ID > 0) {
+      routeID = ID;
+    }
+    //Exex SQL request
+    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeCoords WHERE routeID=? ORDER BY ID;", [routeID]).catch((error) => {Log.make("error", "DB", error)  });
+    //If have point for route in DB
     if(result.length > 0) {
-      let points = false;
-      let response = [];
-      for(i = 0; i < result.length; i++) {
-        response.push(result[i]);
+      //Form data
+      let response = {
+        ID: routeID,
+        points: result
       }
+      //Return
       return response;
     }
+    //If have no points for route
     else {
+      //Return
+      return false;
+    }
+  }
+
+  async routeGetID() {
+    //Get last route ID in DB
+    await this.open();
+    let result = await sqlite3.all(this._dbName, "SELECT MAX(ID) as IDMAX FROM routeList;").catch((error) => {Log.make("error", "DB", error)  });
+    if(result.length > 0) {
+      if(this.routeID < result[0]['IDMAX']) {
+        this.routeID = result[0]['IDMAX'];
+        Log.make("success", "GEOMETRY", `RouteID was set to ${this.routeID}.`);
+      }
+      else {
+        Log.make("error", "GEOMETRY", "Cant find new route ID in DB.");
+      }
+    }
+  }
+
+  async routeGetList() {
+    await this.open();
+    //Get routes list from DB
+    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeList;").catch((error) => {Log.make("error", "DB", error)});
+    //If have route list in DB
+    if(result.length > 0) {
+      //Return
+      return result;
+    }
+    else {
+      //Return
       return false;
     }
   }
@@ -185,7 +230,7 @@ class Geometry {
         Log.make("info", "DB", "CLOSE -> " + this._dbName);
         this.state = "close";
       }
-      //Run evru 5 seconds
+      //Run every 5 seconds
       await wait(5000);
     }
   }
@@ -193,7 +238,7 @@ class Geometry {
   //Generate tiles list for job list
   //----------------------------------------------------------------------------
   async tileList(ID, requiredZoom, map = "google") {
-    Log.make('info', "MAIN", "Start calculation tiles list for polygon " + ID);
+    Log.make('info', "MAIN", `Start calculation tiles list for polygon ${ID} and zoom ${requiredZoom}`);
     let geometry = await this.get(parseInt(ID));
     geometry = geometry[0];
     if(geometry.type == "Polygon") {

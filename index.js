@@ -2,11 +2,11 @@
 //------------------------------------------------------------------------------
 //Config
 //------------------------------------------------------------------------------
-let config = require(__dirname + '/config.js');
+global.config = require('./config.js');
 //------------------------------------------------------------------------------
 //Statistics
 //------------------------------------------------------------------------------
-let stat = require(__dirname + '/src/statistics.js');
+let stat = require('./src/statistics.js');
 //------------------------------------------------------------------------------
 //MD5 to hashed tile names
 //------------------------------------------------------------------------------
@@ -14,13 +14,13 @@ const md5 = require('md5');
 //------------------------------------------------------------------------------
 //Wait функция
 //------------------------------------------------------------------------------
-let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+global.wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 //------------------------------------------------------------------------------
 //Cached tile map
 //------------------------------------------------------------------------------
 //const CachedMap = require('./cachedmap');
 //------------------------------------------------------------------------------
-//Express with socket io
+//Express with socket IO
 //------------------------------------------------------------------------------
 let path = require('path');
 let url = require('url');
@@ -29,22 +29,22 @@ const { createServer } = require("http");
 const { Server } = require("socket.io");
 const app = express();
 const httpServer = createServer(app);
-const io = new Server(httpServer, { /* options */ });
+global.IO = new Server(httpServer, { /* options */ });
 //------------------------------------------------------------------------------
 //Logging service
 //------------------------------------------------------------------------------
-let log = require(__dirname + "/src/log.js");
-const Log = new log();
+let log = require("./src/log.js");
+global.Log = new log();
 //------------------------------------------------------------------------------
 //Logging service
 //------------------------------------------------------------------------------
-let gps = require(__dirname + "/src/gps.js");
-const Gps = new gps(io);
+let gps = require("./src/gps.js");
+global.GPS = new gps();
 //------------------------------------------------------------------------------
 //Geometry handler
 //------------------------------------------------------------------------------
-let geometry = require(__dirname + "/src/geometry");
-const Geometry = new geometry();
+let geometry = require("./src/geometry");
+global.GEOMETRY = new geometry();
 //------------------------------------------------------------------------------
 //Some vars for service
 //------------------------------------------------------------------------------
@@ -61,11 +61,11 @@ let tileCachedList = {};
 //------------------------------------------------------------------------------
 //Static files for browser map
 //------------------------------------------------------------------------------
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(process.mainModule.path + '/public'));
 //------------------------------------------------------------------------------
-//GET request for tiles
+//HTTP Server: GET request for tiles
 //------------------------------------------------------------------------------
-app.get(["/tile", "/cesium/tile"], async function(request, response){
+app.get(["/tile", "/layouts/tile", "/old/tile"], async function(request, response){
   //Получаем данные из запроса
   let parseReq = url.parse(request.url, true);
   //Получаем данный для загрузки тайлов
@@ -108,6 +108,19 @@ app.get(["/tile", "/cesium/tile"], async function(request, response){
   }
 });
 //------------------------------------------------------------------------------
+//HTTP Server: Request to download job
+//------------------------------------------------------------------------------
+app.get("/job", async function(request, response){
+  //Получаем данные из запроса
+  let parseReq = url.parse(request.url, true);
+  //Получаем данный для загрузки тайлов
+  let jobConfig = parseReq.query;
+  //Push job order to list
+  jobConfig.running = false;
+  arrJobList.push(jobConfig);
+  IO.emit("setJobList", arrJobList);
+});
+//------------------------------------------------------------------------------
 //Get request for cached tile map
 //------------------------------------------------------------------------------
 let tileCachedMap = {};
@@ -131,8 +144,6 @@ app.get(["/cachedMap"], async function(request, response){
     response.writeHead(200, {'Content-Type': 'image/png', "Content-Length": 0});
     response.end('');
   }
-
-
   //response.end(buffer);
 
 });
@@ -181,7 +192,7 @@ async function emitTileUpdate(map, x, y, zoom, state) {
       if(typeof tileCachedList.tiles[x] !== "undefined") {
         if(typeof tileCachedList.tiles[x][y] !== "undefined") {
           tileCachedList.tiles[x][y] = state;
-          io.emit("updateTileCachedMap", {x: x, y: y, state: state});
+          IO.emit("updateTileCachedMap", {x: x, y: y, state: state});
         }
       }
     }
@@ -189,7 +200,6 @@ async function emitTileUpdate(map, x, y, zoom, state) {
   return;
 }
 async function tilesService(threadNumber) {
-  Log.make("info", "MAIN", "Thread " + threadNumber + " was started.");
   //Устанавливаем что поток запущен
   threadRunList[threadNumber] = true;
   //Пока поток запущен
@@ -290,7 +300,7 @@ async function tilesService(threadNumber) {
           stat.job.queue = arrJobTilesList.length;
           //Send stat to UI
           if(threadNumber == 1) {
-            io.emit("stat", stat);
+            IO.emit("stat", stat);
           }
         }
         //If haven`t connect map handler
@@ -310,16 +320,13 @@ async function tilesService(threadNumber) {
       threadRunList[threadNumber] = false;
     }
   }
-  //Show exit thread message
-  Log.make("info", "MAIN", "Thread " + threadNumber + " was stoped.");
 }
 //------------------------------------------------------------------------------
 //Socket comunication with client
 //------------------------------------------------------------------------------
-io.on('connection', async function(socket){
+IO.on('connection', async function(socket){
   Log.make("info", "MAIN", "User connected by socket.io");
-  let points = await Geometry.routeGetHistory()
-  socket.emit("routeHistory", points);
+
   socket.on("stat", () => {
     socket.emit("stat", stat);
   });
@@ -331,11 +338,11 @@ io.on('connection', async function(socket){
     //Reset map info array
     let arrMapInfo = [];
     //Get list of files
-    let mapsList = fs.readdirSync(__dirname + "/maps");
+    let mapsList = fs.readdirSync(process.mainModule.path + "/maps");
     //Walk files list
     for(i = 0; i < mapsList.length; i++) {
       //Require module of map handler
-      let map = require(__dirname + "/maps/" + mapsList[i]);
+      let map = require(process.mainModule.path + "/maps/" + mapsList[i]);
       //Init map handler
       map = new map();
       let mapInfo = await map.getInfo();
@@ -347,18 +354,9 @@ io.on('connection', async function(socket){
     socket.emit("setMapList", arrMapInfo);
   });
   //----------------------------------------------------------------------------
-  //New job order request
-  //----------------------------------------------------------------------------
-  socket.on("jobAdd", (jobConfig) => {
-    //Push job order to list
-    jobConfig.running = false;
-    arrJobList.push(jobConfig);
-    io.emit("setJobList", arrJobList);
-  });
-  //----------------------------------------------------------------------------
   //Network state change request
   //----------------------------------------------------------------------------
-  socket.on("setNetworkState", (data) => {
+  socket.on("config-network-state", (data) => {
     switch(data) {
       case "force":
       case "disable":
@@ -369,24 +367,116 @@ io.on('connection', async function(socket){
         break;
     }
   });
+  //--------------------------------------------------------------------------
+  //GPS: Change sample rate time
+  //--------------------------------------------------------------------------
+  socket.on("gps-sample", (data) => {
+    data = parseInt(data);
+    if(typeof data == "number") {
+      if(GPS.sampleRate(data)) {
+        socket.emit("gps-sample", {type: 'info', message: 'GPS: Sample rate changed.'});
+      }
+      else {
+        socket.emit("gps-sample", {type: 'error', message: 'GPS: Sample rate changing error.'});
+      }
+    }
+    else {
+      socket.emit("gps-sample", {type: 'error', message: 'GPS: You must enter valid number.'});
+    }
+  });
+  //----------------------------------------------------------------------------
+  //GPS: Start new track
+  //----------------------------------------------------------------------------
+  socket.on("gps-new-route", async (data) => {
+    if(await GEOMETRY.routeAddRoute(data)) {
+      socket.emit("gps-new-route", {type: 'info', message: "GPS: New route started."});
+    }
+    else {
+      socket.emit("gps-new-route", {type: 'error', message: "GPS: New route starting error."});
+    }
+  });
+  //----------------------------------------------------------------------------
+  //GPS: Route history
+  //----------------------------------------------------------------------------
+  socket.on("gps-route-history", async () => {
+    let points = await GEOMETRY.routeGetHistory();
+    socket.emit("gps-route-history", points);
+  });
+  //----------------------------------------------------------------------------
+  //GPS: Toggle service state
+  //----------------------------------------------------------------------------
+  socket.on("gps-server-service", async() => {
+    let state = await GPS.toggle();
+    if(state) {
+      socket.emit("gps-server-service", {type: "success",message: "GPS: Server service started."});
+    }
+    else {
+      socket.emit("gps-server-service", {type: "info", message: "GPS: Server service stoped."});
+    }
+  });
+  //----------------------------------------------------------------------------
+  //GPS: Toggle record of gps route
+  //----------------------------------------------------------------------------
+  socket.on("gps-record", async() => {
+    let state = await GPS.recordService();
+    if(state) {
+      socket.emit("gps-record", {type: "success",message: "GPS: Record started."});
+    }
+    else {
+      socket.emit("gps-record", {type: "info", message: "GPS: Record stoped."});
+    }
+  });
+  //----------------------------------------------------------------------------
+  //GPS: Get routes list
+  //----------------------------------------------------------------------------
+  socket.on("gps-get-list", async() => {
+    let list = await GEOMETRY.routeGetList();
+    socket.emit("gps-set-list", list);
+  });
+  //----------------------------------------------------------------------------
+  //GPS: Get route history
+  //----------------------------------------------------------------------------
+  socket.on("gps-history", async (routeID) => {
+    if(routeID > 0) {
+      let data = await GEOMETRY.routeGetHistory(routeID);
+      socket.emit("gps-history", data);
+    }
+  });
+  //----------------------------------------------------------------------------
+  //Change server tiles download mode (common settings)
+  //----------------------------------------------------------------------------
+  socket.on("mode-change", (data) => {
+    switch(data) {
+      case "enable":
+      case "force":
+        config.network.state = data;
+        break;
+      default:
+        config.network.state = "disable";
+        break;
+    }
+    Log.make("info", "MAIN", `Network mode changed to '${config.network.state}'`);
+    socket.emit("mode-change", {type: 'info', message: `Network mode changed to '${config.network.state}'`});
+  });
   //----------------------------------------------------------------------------
   //Add polygons/points (geometry) to DB
   //----------------------------------------------------------------------------
   socket.on("newGeometry", async (geometry) => {
     Log.make("info", "MAIN", "Request to save new geometry.");
-    await Geometry.save(geometry);
+    await GEOMETRY.save(geometry);
   });
   //----------------------------------------------------------------------------
   //Delete polygons/points (geometry) from map
   //----------------------------------------------------------------------------
   socket.on("deleteGeometry", async (ID) => {
-    await Geometry.delete(ID);
+    Log.make("info", "MAIN", `Request to delete geometry ${ID}.`);
+    await GEOMETRY.delete(ID);
   });
   //----------------------------------------------------------------------------
   //Update polygons/points (geometry) in DB
   //----------------------------------------------------------------------------
   socket.on("updateGeometry", async (geometry) => {
-    await Geometry.update(geometry);
+    await GEOMETRY.update(geometry);
   });
   //----------------------------------------------------------------------------
   //Tile Cached Map
@@ -394,8 +484,8 @@ io.on('connection', async function(socket){
   socket.on("getTileCachedMap", async (mapInfo) => {
     let map = "googlesat";
     let mapObj = arrMaps[map];
-    let requiredZoom = 13;
-    let tempArr = await Geometry.tileList(mapInfo.ID, requiredZoom, map);
+    let requiredZoom = 7;
+    let tempArr = await GEOMETRY.tileList(mapInfo.ID, requiredZoom, map);
     let time = Date.now();
     Log.make("info", "MAIN", "Start checking tiles in DB for cached map.");
     if(Array.isArray(tempArr)) {
@@ -436,8 +526,8 @@ io.on('connection', async function(socket){
     socket.emit("setJobList", arrJobList);
   });
   socket.on("getGeometry", async () => {
-    let geometry = await Geometry.get();
-    io.emit("setGeometry", geometry);
+    let geometry = await GEOMETRY.get();
+    socket.emit("setGeometry", geometry);
   });
   socket.on('disconnect', function() {
     Log.make("info", "MAIN", "User disconnected by socket.io");
@@ -458,18 +548,21 @@ let currentJob = {};
   //----------------------------------------------------------------------------
   //Check proxy settings during start
   //----------------------------------------------------------------------------
-  let httpEngine = require(__dirname + "/src/http-engine");
+  let httpEngine = require("./src/http-engine");
   await httpEngine.checkProxy(config);
-
+  //----------------------------------------------------------------------------
+  //Read maps list on server
+  //----------------------------------------------------------------------------
   const fs = require('fs');
   //Reset map info array
   let arrMapInfo = [];
+  //console.log(process);
   //Get list of files
-  let mapsList = fs.readdirSync(__dirname + "/maps");
+  let mapsList = fs.readdirSync(process.mainModule.path + "/maps");
   //Walk files list
   for(i = 0; i < mapsList.length; i++) {
     //Require module of map handler
-    let map = require(__dirname + "/maps/" + mapsList[i]);
+    let map = require(process.mainModule.path + "/maps/" + mapsList[i]);
     //Init map handler
     map = new map();
     let mapInfo = await map.getInfo();
@@ -483,15 +576,23 @@ let currentJob = {};
   //----------------------------------------------------------------------------
   await httpServer.listen(config.service.port);
   Log.make("success", "MAIN", "Start service on port " + config.service.port);
-
-  let geometry = await Geometry.get();
-  io.emit("setGeometry", geometry);
   //----------------------------------------------------------------------------
   //Service for starting jobs
   //----------------------------------------------------------------------------
   while(true) {
     //Whait second
     await wait(5000);
+    //Create stat of server and send it to client
+    let serverInfo = {
+      memory: process.memoryUsage().heapTotal / 1024 / 1024,
+      fsRead: process.resourceUsage().fsRead,
+      fsWrite: process.resourceUsage().fsWrite,
+      cpu: process.resourceUsage().userCPUTime,
+      download: stat.general.size / 1024 / 1024,
+      queue: stat.general.queue
+    }
+    serverInfo.memory.toFixed(2);
+    IO.emit("server-stat", serverInfo);
     //If job tile list empty and job list isnt
     if(arrJobTilesList.length == 0 && arrJobList.length > 0) {
       //If first job in list already downloaded
@@ -513,15 +614,27 @@ let currentJob = {};
         stat.job.skip = 0;
         stat.job.time = 0;
         //Send job list to client
-        io.emit("setJobList", arrJobList);
-        //Create tile list for job and start threads
-        let tempArr = await Geometry.tileList(currentJob.polygonID, currentJob.zoom, currentJob.map);
-        if(Array.isArray(tempArr)) {
-          arrJobTilesList = tempArr;
+        IO.emit("setJobList", arrJobList);
+        //Loop for all available zoom levels for download
+        for(let i = 4; i <= 20; i++) {
+          //If zoom level required for download
+          if(currentJob['z' + i] === 'true') {
+            //Create tile list for job
+            let tempArr = await GEOMETRY.tileList(currentJob.polygonID, i, currentJob.mapID);
+            //If create tile list for current zoom
+            if(Array.isArray(tempArr)) {
+              //Add tiles list to main Array
+              arrJobTilesList = arrJobTilesList.concat(tempArr);
+            }
+          }
+        }
+        //If main tile list isn`t empty
+        if(arrJobTilesList.length > 0) {
           //Make stat
           stat.job.total = arrJobTilesList.length;
           stat.job.queue = arrJobTilesList.length;
           Log.make("info", "MAIN", "Job started. Tile Count: " + arrJobTilesList.length);
+          //Start threads
           threadsStarter();
         }
       }

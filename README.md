@@ -1,4 +1,3 @@
-81920
 # maptorium
 
 ### Help me pls
@@ -58,10 +57,14 @@ Next futures to add:
 
 ### Version
 
-Very early version 0.5.0. Under heavy development
+Very early version 0.8.0. Under heavy development
+
+16.07.2022 - Version 0.8.0. UI update.
 
 08.05.2022 - GPS module, GPS point on map(module write for online http server to get GPS, if you need read data from usb gps, you need rewrite gps.js to get data correcly), folder structure change, some small bugs resolving (now compatible with Windows).
+
 13.02.2022 - Basic geometry editing function (Leaflet geoman plugin). Organize DB for storing all geometry. Basic tile cached map.
+
 01.02.2022 - Full UI remastering. Now use profesional HTML theme. Jobs list, Job status bar, Tiles Grid, etc.
 
 29.01.2022 - Add yandex sat map, some errors resolve, UI dynamicaly get maps list from server

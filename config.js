@@ -4,7 +4,7 @@ let config = {
     //Listen port
     port: 9009,
     //Threads for http request
-    threads: 2,
+    threads: 4,
   },
   //Request for mass tile download
   request: {
@@ -21,7 +21,7 @@ let config = {
   },
   network: {
     //(enable, disable, force)
-    state: "disable"
+    state: "enable"
   },
   proxy: {
     //Use proxy or not (true or false)
@@ -82,6 +82,12 @@ let config = {
     MAIN: {
       success: true,
       info: true,
+      error: true,
+      warning: true
+    },
+    GEOMETRY: {
+      success: true,
+      info: false,
       error: true,
       warning: true
     }

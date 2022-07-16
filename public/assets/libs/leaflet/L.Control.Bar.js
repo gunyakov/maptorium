@@ -46,7 +46,15 @@ L.Control.Bar = L.Control.extend({
         controlContainer.insertBefore(container, controlContainer.firstChild);
 
         this._map = map;
-
+        let _this = this;
+        map.on("mousemove", function(e) {
+          $("#mLat").html("Lat: " + _this.ConvertDEGToDMS(e.latlng.lat, true));
+          $("#mLon").html("Lon: " + _this.ConvertDEGToDMS(e.latlng.lng, false));
+        });
+        $("#mZ").html("Z" + map.getZoom());
+        map.on("zoomend", function(e) {
+        	$("#mZ").html("Z" + map.getZoom());
+        });
         // Make sure we don't drag the map when we interact with the content
         var stop = L.DomEvent.stopPropagation;
         L.DomEvent
@@ -60,7 +68,22 @@ L.Control.Bar = L.Control.extend({
 
         return this;
     },
+    ConvertDEGToDMS: function(deg, lat) {
+        var absolute = Math.abs(deg);
 
+        var degrees = Math.floor(absolute);
+        var minutesNotTruncated = (absolute - degrees) * 60;
+        var minutes = Math.floor(minutesNotTruncated);
+        var seconds = ((minutesNotTruncated - minutes) * 60).toFixed(2);
+
+        if (lat) {
+            var direction = deg >= 0 ? "N" : "S";
+        } else {
+            var direction = deg >= 0 ? "E" : "W";
+        }
+
+        return degrees + "°" + minutes + "'" + seconds + "\"" + direction;
+    },
     removeFrom: function (map) {
         //if the control is visible, hide it before removing it.
         this.hide();

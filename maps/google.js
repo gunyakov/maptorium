@@ -21,20 +21,8 @@ class ExtMap extends map {
     };
   }
 
-  async getTile(z, x, y) {
-    await this.getMapVersion();
-    let tileUrl = await this.getURL(z, x, y);
-    this._log.make("info", "HTTP", tileUrl);
-    let tile = await this.getTileMain(z, x, y, tileUrl);
-    if(tile) {
-      return tile;
-    }
-    else {
-      return false;
-    }
-  }
-
   async getURL(z, x, y) {
+    await this.getMapVersion();
     let rnd = await this.getRandomInt(4);
     let url = `https://mt${rnd}.google.com/vt/lyrs=s&hl=en&v=${this.mapVersion}&z=${z}&x=${x}&y=${y}`;
     return url;
@@ -47,7 +35,7 @@ class ExtMap extends map {
       let url = 'https://maps.googleapis.com/maps/api/js';
       //request.encoding = "utf-8";
       let responce = await this._httpEngine.get(url).catch((error) => {
-        this._log.make("error", "HTTP", error);
+        Log.make("error", "HTTP", error);
       });
       //response = response.body;
       //console.log(response);
@@ -61,7 +49,7 @@ class ExtMap extends map {
             return this.mapVersion = 917;
           }
         }
-        this._log.make("info", "HTTP", "Google map version: " + this.mapVersion);
+        Log.make("info", "HTTP", "Google map version: " + this.mapVersion);
         return this.mapVersion;
       }
       else {

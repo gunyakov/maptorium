@@ -1,13 +1,4 @@
 //------------------------------------------------------------------------------
-//Config
-//------------------------------------------------------------------------------
-let config = require(__dirname + '/../config.js');
-//------------------------------------------------------------------------------
-//Logging service
-//------------------------------------------------------------------------------
-let log = require(__dirname + '/log.js');
-const Log = new log();
-//------------------------------------------------------------------------------
 //MD5 to store DB file name in list
 //------------------------------------------------------------------------------
 const md5 = require('md5');
@@ -22,12 +13,8 @@ const CRC32 = require("crc-32");
 //------------------------------------------------------------------------------
 //Sqlite3 Promise wrapper
 //------------------------------------------------------------------------------
-let sqlite3 = require(__dirname + '/sqlite3-promise.js');
+let sqlite3 = require('./sqlite3-promise.js');
 sqlite3 = new sqlite3();
-//------------------------------------------------------------------------------
-//Wait function
-//------------------------------------------------------------------------------
-let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 //------------------------------------------------------------------------------
 //DB handler for tile storage based on sqlite3 promise version
 //------------------------------------------------------------------------------
@@ -167,25 +154,32 @@ class DB {
   //Save tile in DB
   //----------------------------------------------------------------------------
   async saveTile(z, x, y, storage, blob, size, mapVersion = 0) {
-    //Получаем полный путь к базе
-    let dbName = await this.getDBName(z, x, y, storage);
-    //Open/Create DB
-    await this.getDB(z, x, y, storage);
-    //Получаем время запроса
-    let timeStamp = await this.time();
-    //Заносим изображение в базу
-    let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]);
-    //Если запрос вернул результат
-    if(results) {
-      Log.make("success", "DB", "INSERT -> " + dbName);
+    //If enable to write into DB
+    if(config.db.ReadOnly === false) {
+      //Получаем полный путь к базе
+      let dbName = await this.getDBName(z, x, y, storage);
+      //Open/Create DB
+      await this.getDB(z, x, y, storage);
+      //Получаем время запроса
+      let timeStamp = await this.time();
+      //Заносим изображение в базу
+      let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]);
+      //Если запрос вернул результат
+      if(results) {
+        Log.make("success", "DB", "INSERT -> " + dbName);
+        return true;
+      }
+      //Если запрос вернул пустой результат, значит база была закрыта
+      else {
+        Log.make("error", "DB", "INSERT -> " + dbName);
+        //Устанавливаем что базу нужно открыть в принудительном порядке
+        return false;
+      }
+    }
+    else {
       return true;
     }
-    //Если запрос вернул пустой результат, значит база была закрыта
-    else {
-      Log.make("error", "DB", "INSERT -> " + dbName);
-      //Устанавливаем что базу нужно открыть в принудительном порядке
-      return false;
-    }
+
   }
   //----------------------------------------------------------------------------
   //Update tile in DB

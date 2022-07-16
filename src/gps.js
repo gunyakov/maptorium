@@ -1,29 +1,19 @@
 //------------------------------------------------------------------------------
 //HTTP Engine
 //------------------------------------------------------------------------------
-let httpEngine = require(__dirname + "/http-engine.js");
-//------------------------------------------------------------------------------
-//Logging service
-//------------------------------------------------------------------------------
-let log = require(__dirname + "/log.js");
-const Log = new log();
-//------------------------------------------------------------------------------
-//Geometry handler
-//------------------------------------------------------------------------------
-let geometry = require(__dirname + "/geometry");
-const Geometry = new geometry();
-//------------------------------------------------------------------------------
-//Wait function
-//------------------------------------------------------------------------------
-let wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+let httpEngine = require("./http-engine.js");
 //------------------------------------------------------------------------------
 //General map handler
 //------------------------------------------------------------------------------
 class GPS {
 
-  constructor(io = false, db = false){
-    this.io = io;
+  constructor(){
     this.callback = false;
+    this.lastLng = 0;
+    this.lastLat = 0;
+    this.enable = false;
+    this.record = true;
+    this.sampleRateTime = 60000;
     this.start();
   }
 
@@ -46,25 +36,71 @@ class GPS {
     Log.make("info", "GPS", "GPS service stoped.");
   }
   //----------------------------------------------------------------------------
+  //Change sample rate time
+  //----------------------------------------------------------------------------
+  async sampleRate(rate = 60) {
+    if(typeof rate == "number") {
+      this.sampleRateTime = rate * 1000;
+      Log.make("info", "GPS", `Sample rate changed to ${rate} seconds.`);
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+  //----------------------------------------------------------------------------
+  //Toggle GPS Service state
+  //----------------------------------------------------------------------------
+  async toggle() {
+    if(this.enable) {
+      await this.stop();
+    }
+    else {
+      await this.start();
+    }
+    return this.enable;
+  }
+  //----------------------------------------------------------------------------
+  //Toggle gps record state
+  //----------------------------------------------------------------------------
+  async recordService() {
+    this.record = !this.record;
+    return this.record;
+  }
+  //----------------------------------------------------------------------------
   //Service function to get GPS coords from server constantly
   //----------------------------------------------------------------------------
   async service() {
+    //Run cycle while service enabled
     while(this.enable) {
-      let gpsData = await httpEngine.get("http://192.168.1.110:8080/SDBnet/online/live/fetchLive", "json", true, "get", "", "JSESSIONID=2206FC81F0525B2E3900904237975B28");
+      //Get data from JSON server
+      let gpsData = await httpEngine.get("http://192.168.1.110:8080/SDBnet/online/live/fetchLive", config, "json", true, "get", "", "JSESSIONID=2206FC81F0525B2E3900904237975B28");
+      //If server return proper responce
       if(gpsData.data) {
+        //Get Coords from JSON responce
         let lng = gpsData.data['lon_decimal'];
         let lat = gpsData.data['lat_decimal'];
-        await Geometry.routeAddPoint(lat, lng);
-        Log.make("success", "GPS", "GPS data updated.");
+        //If coords is different from last update and record enabled
+        if((this.lastLng != lng || this.lastLat != lat) && this.record) {
+          //Add coords to database
+          await GEOMETRY.routeAddPoint(lat, lng);
+          //Make log
+          Log.make("success", "GPS", "GPS data recorded.");
+        }
+        //Save current coords into class vars
+        this.lastLat = lat;
+        this.lastLng = lng;
+        //Call callback, if registered
         if(this.callback) {
           this.callback(gpsData.data);
         }
-        if(this.io) {
-          this.io.emit("gpsData", gpsData.data);
-		  Log.make("success", "GPS", "GPS send to user.");
+        //Send data to user, if any connected
+        if(IO) {
+          await IO.emit("gpsData", gpsData.data);
+          Log.make("success", "GPS", "GPS send to user.");
         }
       }
-      await wait(60000);
+      await wait(this.sampleRateTime);
     }
   }
 }

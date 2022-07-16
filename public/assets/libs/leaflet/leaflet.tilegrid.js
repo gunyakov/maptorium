@@ -9,20 +9,19 @@ L.TileGrid = L.Class.extend({
     showText: true,
     color: '#3388ff',
     weight: 1,
-    opacity: 1
+    opacity: 0.5
 	},
   initialize: function (options) {
 		L.setOptions(this, options);
     this._gridGroupe = null;
-		//this._layerControlInputs = [];
-		//this._layers = [];
-		//this._lastZIndex = 0;
-		//this._handlingClick = false;
+    this._selectMode = false;
+    this._callback = false;
 	},
   onAdd: function (map) {
 		this._map = map;
     this._initGrid();
     map.on('zoomend moveend', this._update, this);
+    map.on('click', this._tileselect, this);
 	},
   setZoom: function (zoom) {
     zoom = Math.round(zoom);
@@ -139,6 +138,97 @@ L.TileGrid = L.Class.extend({
     }
     //console.log(this._map.getZoom());
     this._initGrid();
+  },
+  //------------------------------------------------------------------------------
+  //Service function to project coordinates
+  //------------------------------------------------------------------------------
+  _projectCoords: function(coords) {
+    let projCoords = [];
+    for(i = 0; i < coords.length; i++) {
+      if(Array.isArray(coords[i])) {
+        coordProject = []
+        for(a = 0; a < coords[i].length; a++) {
+          coordProject.push(this._map.project(coords[i][a]));
+        }
+        projCoords.push(coordProject);
+      }
+      else {
+        projCoords.push(this._map.project(coords[i]));
+      }
+    }
+    return projCoords;
+  },
+  //------------------------------------------------------------------------------
+  //Activate select tile as geometry
+  //------------------------------------------------------------------------------
+  select: function(callback = false) {
+    this._selectMode = true;
+    this._callback = callback;
+  },
+  //------------------------------------------------------------------------------
+  //Select tile as geometry
+  //------------------------------------------------------------------------------
+  _tileselect: function(e) {
+  	if(this._selectMode) {
+  		let points = this._map.project(e.latlng, this._map.getZoom());
+  		let x1 = Math.floor(points.x / 256) * 256;
+  		let y1 = Math.floor(points.y / 256) * 256;
+  		let latlngs = [];
+  		point = L.point(x1, y1);
+  		point = this._map.unproject(point, this._map.getZoom());
+  		latlngs.push([point.lat, point.lng]);
+  		point = L.point(x1 + 256, y1);
+  		point = this._map.unproject(point, this._map.getZoom());
+  		latlngs.push([point.lat, point.lng]);
+  		point = L.point(x1 + 256, y1 + 256);
+  		point = this._map.unproject(point, this._map.getZoom());
+  		latlngs.push([point.lat, point.lng]);
+  		point = L.point(x1, y1 + 256);
+  		point = this._map.unproject(point, this._map.getZoom());
+  		latlngs.push([point.lat, point.lng]);
+  		let polygon = L.polygon(latlngs, {
+        color: this.options.color,
+        fillColor: this.options.fillColor,
+        fillOpacity: this.options.fillOpacity,
+        contextmenu: true,
+        contextmenuWidth: 140,
+        contextmenuInheritItems: false,
+        contextmenuItems: [{
+          text: 'Edit',
+          callback: window.editGeometry
+        },
+        {
+          text: 'Start download job',
+          callback: window.showJobModal
+        },
+        {
+          text: 'Show tile cached map',
+          callback: window.showTileCachedMap
+        },
+        '-',
+        {
+          text: 'Delete',
+          callback: window.deleteGeometry
+        }]
+  		}).addTo(this._map);
+  		this._selectMode = false;
+      //console.log(polygon);
+      let geometry = {
+        type: "Polygon",
+        bounds: false,
+        color: this.options.color,
+        fillColor: this.options.fillColor,
+        fillOpacity: this.options.fillOpacity,
+        coords: this._projectCoords(polygon.getLatLngs()),
+        bounds: polygon.getBounds(),
+        zoom: this._map.getZoom()
+      }
+      geometry.bounds._southWest = this._map.project(geometry.bounds._southWest);
+      geometry.bounds._northEast = this._map.project(geometry.bounds._northEast);
+      if(this._callback) {
+        this._callback(geometry);
+      }
+  	}
   }
 });
 
