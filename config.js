@@ -25,15 +25,15 @@ let config = {
   },
   proxy: {
     //Use proxy or not (true or false)
-    enable: false,
+    enable: true,
     //Enable tor change ID
-    tor: false,
+    tor: true,
     //Type of proxy(socks, socks4, socks5, http, https)
-    protocol: "http",
+    protocol: "socks5",
     //Host can be IP or domain
     host: '127.0.0.1',
     //Port
-    port: 8999,
+    port: 9050,
     auth: {
       username: '',
       password: '',

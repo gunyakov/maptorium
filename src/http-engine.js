@@ -15,7 +15,7 @@ let TorService = new tor();
 //------------------------------------------------------------------------------
 //HTTP GET request
 //------------------------------------------------------------------------------
-exports.get = async function(url, config, responseType = 'text', force = false, method = 'get', data = '', cookies = false) {
+exports.get = async function(url, config = require('../config.js'), responseType = 'text', force = false, method = 'get', data = '', cookies = false) {
   return new Promise(function(resolve, reject) {
     //If proxy enable
     let httpsAgent = {};
