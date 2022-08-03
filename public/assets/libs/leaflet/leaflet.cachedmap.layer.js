@@ -74,7 +74,7 @@ L.CachedMap = L.GridLayer.extend({
     this.redraw();
   },
   updateTile: function(tileInfo) {
-    console.log(this._tilesList);
+    //console.log(this._tilesList);
     if(this._cachedMap) {
       this._cachedMap.tiles[tileInfo.x][tileInfo.y] = tileInfo.state;
       //Calculate curent zoom tile x/y

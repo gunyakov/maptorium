@@ -5,7 +5,7 @@ let axios = require("axios");
 //------------------------------------------------------------------------------
 //Socks Proxy Agent Generator
 //------------------------------------------------------------------------------
-const SocksProxyAgent = require('socks-proxy-agent');
+let { SocksProxyAgent } = require('socks-proxy-agent');
 const HttpsProxyAgent = require('https-proxy-agent');
 //------------------------------------------------------------------------------
 //ТОР

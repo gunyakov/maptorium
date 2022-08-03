@@ -51,7 +51,6 @@ $(document).ready(() => {
   $("#startJob").on("click", function(e) {
   	$("#jobModal").modal('hide');
     let jobConfig = $("#jobForm").serialize();
-    console.log(jobConfig);
     $.ajax({
       url: "/job",
       data: jobConfig,
@@ -64,7 +63,6 @@ $(document).ready(() => {
   //------------------------------------------------------------------------------
   socket.emit("getJobList");
   socket.on("setJobList", (arrJobList) => {
-    console.log(arrJobList);
     let jobHTML = "";
     for(i = 0; i < arrJobList.length; i++) {
       let zString = "";
@@ -114,7 +112,6 @@ $(document).ready(() => {
   $('#errorLog').html('');
   $('#infoLog').html('');
   socket.on("log", (data) => {
-    console.log(data.type);
     $("#mLog").html(data.message);
     if(data.type == "error") {
       $("#errorLog").append(`<p>${data.message}</p>`);
@@ -175,11 +172,10 @@ $(document).ready(() => {
       }
   };
   let chart = new ApexCharts(document.querySelector("#chart"), options);
-  
+
   chart.render();
 
   socket.on("stat", (stat) => {
-    //console.log(stat);
   	$("#mQue").html("&nbsp;Queue: " + stat.general.queue);
   	$("#mDownload").html("&nbsp;Download " + stat.general.download + " (" + formatFileSize(stat.general.size, 2) + ")");
     let proceedTiles = stat.job.download + stat.job.skip + stat.job.error + stat.job.empty;
@@ -194,8 +190,6 @@ $(document).ready(() => {
     $("#statJobEmptyTiles").html("Empty: " + stat.job.empty);
     $("#statJobSkipTiles").html("Skip: " + stat.job.skip);
     let ETA = stat.job.time / proceedTiles * stat.job.queue;
-    //console.log(stat.job);
-    //console.log(ETA);
     ETA = secondsToHms(ETA / 1000);
     $("#ETA").html(`ETA ${ETA}`);
   });
@@ -218,4 +212,340 @@ $(document).ready(() => {
   n.addEventListener("click", function(e) {
     !e.target.parentElement.classList.contains("right-bar-toggle-close") && e.target.closest(".right-bar-toggle, .right-bar") || document.body.classList.remove("right-bar-enabled");
   });
+
+  var ColorPickr = Pickr.create({
+      el: "#mpColor",
+      theme: "classic",
+      default: "#038edc",
+      defaultRepresentation: 'RGBA',
+      swatches: ["rgba(244, 67, 54, 1)", "rgba(233, 30, 99, 0.95)", "rgba(156, 39, 176, 0.9)", "rgba(103, 58, 183, 0.85)", "rgba(63, 81, 181, 0.8)", "rgba(33, 150, 243, 0.75)", "rgba(3, 169, 244, 0.7)", "rgba(0, 188, 212, 0.7)", "rgba(0, 150, 136, 0.75)", "rgba(76, 175, 80, 0.8)", "rgba(139, 195, 74, 0.85)", "rgba(205, 220, 57, 0.9)", "rgba(255, 235, 59, 0.95)", "rgba(255, 193, 7, 1)"],
+      components: {
+        preview: !0,
+        opacity: !0,
+        hue: !0,
+        interaction: {
+          hex: 0,
+          rgba: !0,
+          hsva: 0,
+          input: !0,
+          clear: 0,
+          save: !0
+        }
+      }
+    });
+    ColorPickr.on('save', (color, instance) => {
+      ColorPickr.hide();
+    });
+    var fillColorPickr = Pickr.create({
+        el: "#mpFillColor",
+        theme: "classic",
+        default: "#038edc",
+        defaultRepresentation: 'RGBA',
+        swatches: ["rgba(244, 67, 54, 1)", "rgba(233, 30, 99, 0.95)", "rgba(156, 39, 176, 0.9)", "rgba(103, 58, 183, 0.85)", "rgba(63, 81, 181, 0.8)", "rgba(33, 150, 243, 0.75)", "rgba(3, 169, 244, 0.7)", "rgba(0, 188, 212, 0.7)", "rgba(0, 150, 136, 0.75)", "rgba(76, 175, 80, 0.8)", "rgba(139, 195, 74, 0.85)", "rgba(205, 220, 57, 0.9)", "rgba(255, 235, 59, 0.95)", "rgba(255, 193, 7, 1)"],
+        components: {
+          preview: !0,
+          opacity: !0,
+          hue: !0,
+          interaction: {
+            hex: 0,
+            rgba: !0,
+            hsva: 0,
+            input: !0,
+            clear: 0,
+            save: !0
+          }
+        }
+      });
+
+      fillColorPickr.on('save', (color, instance) => {
+        fillColorPickr.hide();
+      });
+
+      //------------------------------------------------------------------------
+      //CATEGORY Manager
+      //------------------------------------------------------------------------
+      globalMarkID = 0;
+      globalCategoryID = 0;
+      globalShowMarkManager = false;
+
+      $.ajaxSetup({
+        dataType: "json",
+        beforeSend: function(jqXHR, settings) {
+          jqXHR.url = settings.url;
+        },
+        error: (responce, code) => {
+          alertify.error(`Request ${responce.url}: ${responce.status} ${responce.statusText}`);
+        }
+      });
+
+      function getCategoryList(arrCategory, parentID = 0) {
+        let arrResult = [];
+        for(let i = 0; i < arrCategory.length; i++){
+          if (arrCategory[i]['parentID'] == parentID) {
+            arrResult.push(arrCategory[i]);
+          }
+        }
+        if (arrResult.length > 0) {
+          return arrResult;
+        }
+        else {
+          return false;
+        }
+      }
+
+      function recurCategoryList(categoryList, parentID = 0, space = "") {
+        let html = "";
+        let html2 = "";
+        let arrCategory = getCategoryList(categoryList, parentID);
+        if(arrCategory) {
+          if (parentID > 0) {
+            html += "<ul>";
+          }
+          for(let i = 0; i < arrCategory.length; i++) {
+            html += `<li class="folder"><a href="#" categoryID="${arrCategory[i]['ID']}">${arrCategory[i]['name']}</a>`;
+            let [subHtml, subHtml2] = recurCategoryList(categoryList, arrCategory[i]['ID'], space + "&nbsp;&nbsp;");
+            if(subHtml) {
+              html+= subHtml;
+            }
+            html += `</li>`;
+            html2 += space + `<option value="${arrCategory[i]['ID']}">${arrCategory[i]['name']}</option>`;
+            if (subHtml2) {
+              html2 += subHtml2;
+            }
+          }
+          if (parentID > 0) {
+            html += "</ul>";
+          }
+          return [html, html2];
+        }
+        else {
+          return [false, false];
+        }
+      }
+
+      function updateCategoryList() {
+        return new Promise(function(resolve, reject) {
+          $.ajax({
+            url: "/marks/category",
+            dataType: "json",
+            success: (responce, code) => {
+              if (responce.result) {
+                let [html, html2] = recurCategoryList(responce.list);
+                $("#managerCategoryList").html(html);
+                $("#marksCategoryList").html(`<option value="0">Root</option>` + html2);
+                $("#marksCategoryList2").html(html2);
+                $("#managerCategoryList a").on("click", (event) => {
+                  $("#managerCategoryList a").removeClass("bg-secondary");
+                  event.stopPropagation();
+                  let reqCatID = $(event.target).attr("categoryid");
+                  $.ajax({
+                    url: "/marks/list/" + reqCatID,
+                    dataType: "json",
+                    success: (responce, code) => {
+                      if(responce.result) {
+                        let html = "";
+                        for(let i = 0; i < responce.list.length; i++) {
+                          let name = responce.list[i]['name'];
+                          if(name.length < 1) {
+                            name = "Default mark " + responce.list[i]['ID'];
+                          }
+                          html += `<li><a href="#" markID="${responce.list[i]['ID']}">${name}</a></li>`;
+                        }
+                        $("#managerMarksList").html(html);
+                        $("#managerMarksList a").on("click", (event) => {
+                          $("#managerMarksList a").removeClass("bg-secondary");
+                          event.stopPropagation();
+                          globalMarkID = $(event.target).attr("markid");
+                          $(event.target).addClass("bg-secondary");
+                        });
+                      }
+                      else {
+                        $("#managerMarksList").html('<li><a href="#" markID="0">Empty list</a></li>');
+                      }
+                    }
+                  });
+                  $(event.target).addClass("bg-secondary");
+                  globalMarkID = 0;
+                });
+                resolve(true);
+              }
+              else {
+                alertify.warning(responce.message);
+                resolve(true);
+              }
+            },
+            error: (responce, code) => {
+              alertify.error(`Request ${responce.url}: ${responce.status} ${responce.statusText}`);
+              resolve(false);
+            }
+          });
+        });
+      }
+
+      updateCategoryList();
+
+      $("#t-placemarks-manager").on("click", async () => {
+        let updateResult = await updateCategoryList();
+        if(updateResult) {
+          $("#marksManagerModal").modal('show');
+        }
+      });
+
+      $("#categoryAddBtn").on('click', () => {
+        $("#marksManagerModal").modal('hide');
+        $("#marksCategoryModal").modal('show');
+      });
+
+      $("#formCategoryClose").on("click", () => {
+        $("#marksManagerModal").modal('show');
+      });
+
+      $("#formCategorySave").on("click", () => {
+        let data = $("#formAddCategory").serialize();
+        $.ajax({
+          method: "post",
+          url: "/marks/category/add",
+          data: data,
+          dataType: "json",
+          success: async (responce, code) => {
+            if(responce.result == true) {
+              alertify.success(responce.message);
+              await updateCategoryList();
+              $("#marksManagerModal").modal('show');
+              $("#marksCategoryModal").modal('hide');
+            }
+            else {
+              alertify.error(responce.message);
+            }
+          }
+        });
+      });
+
+      $("#btnMarkEdit").on("click", (event) => {
+        if(globalMarkID != 0) {
+          $("#marksManagerModal").modal('hide');
+          globalShowMarkManager = true;
+          getMarkInfo(globalMarkID);
+        }
+        else {
+          alertify.warning("You didn`t select any mark for editing.");
+        }
+      });
+
+      function getMarkInfo(markID = 0) {
+        return new Promise(function(resolve, reject) {
+          $.ajax({
+            url: "/marks/info/" + markID,
+            dataType: "json",
+            success: (response, code) => {
+              $(`#marksCategoryList2 option[value=${response.categoryID}]`).attr('selected','selected');
+              $("#markPropertiesForm").find(":input[name='name']").val(response.name);
+              $("#markPropertiesForm").find(":input[name='width']").val(response.width);
+              fillColorPickr.setColor(response.fillColor + Math.floor(response.fillOpacity * 255).toString(16), false);
+              ColorPickr.setColor(response.color, false);
+              $("#marksPropertiesID").val(markID);
+              $("#marksPropertiesModal").modal('show');
+              resolve(true);
+            },
+            error: (response, code) => {
+              alertify.error(`Request ${response.url}: ${response.status} ${response.statusText}`);
+              resolve(false);
+            }
+          });
+        });
+      }
+      //----------------------------------------------------------------------------
+      //Context menu: GEOMETRY PROPERTIES
+      //----------------------------------------------------------------------------
+      window.propertiesGeometry = function(e, ID) {
+        //console.log(e.relatedTarget);
+        let markID = e.relatedTarget.maptoriumID;
+        getMarkInfo(markID);
+      }
+      //------------------------------------------------------------------------------
+      //Context menu: DELETE GEOMETRY
+      //------------------------------------------------------------------------------
+      window.deleteGeometry = function(e) {
+        //Send to server ID of geometry
+        $.ajax({
+          url: "/marks/delete",
+          data: `markID=${e.relatedTarget.maptoriumID}`,
+          method: "post",
+          success: (response, code) => {
+            if(response.result) {
+              //Remove geometry from map
+              e.relatedTarget.remove();
+              alertify.success(response.message);
+            }
+            else {
+              alertify.error(response.message);
+            }
+          }
+        });
+      }
+
+      $("#marksPropertiesSave").on("click", (event) => {
+        let data = $("#markPropertiesForm").serialize();
+        let fillColor = fillColorPickr.getColor();
+        let opacity = Math.round(fillColor.a * 100) / 100;
+        data += `&fillOpacity=` + opacity;
+        fillColor = fillColor.toHEXA();
+        fillColor = "#" + fillColor[0] + fillColor[1] + fillColor[2];
+        data += `&fillColor=` + fillColor;
+        let color = ColorPickr.getColor();
+        color = color.toHEXA();
+        color = "#" + color[0] + color[1] + color[2];
+        data += `&color=` + color;
+        $.ajax({
+          url: "/marks/update",
+          data: data,
+          dataType: "json",
+          method: "post",
+          success: (response, code) => {
+            if(response.result) {
+              alertify.success(response.message);
+              map.eachLayer(function(layer){
+                if(layer.maptoriumID == $("#marksPropertiesID").val()) {
+                  layer.setStyle({
+                    color: color,
+                    fillColor: fillColor,
+                    fillOpacity: opacity,
+                    weight: $("#markPropertiesForm").find(":input[name='width']").val()
+                  });
+                  layer.setTooltipContent($("#markPropertiesForm").find(":input[name='name']").val());
+                }
+              });
+            }
+            else {
+              alertify.error(response.message);
+            }
+            $("#marksPropertiesModal").modal('hide');
+            if(globalShowMarkManager) {
+              globalShowMarkManager = false;
+              $("#marksManagerModal").modal('show');
+            }
+          }
+        })
+
+      });
+
+      //------------------------------------------------------------------------
+      //INSTRUMENTAL PANEL
+      //------------------------------------------------------------------------
+      globalPanelMove = false;
+
+      $("#panelMoveBtn").on( 'mousedown', (e) => {
+        globalPanelMove = true;
+      });
+
+      $("#panelMoveBtn").on( 'mouseup', (e) => {
+        globalPanelMove = false;
+      });
+
+      $("body").on("mousemove", (e) => {
+        if(globalPanelMove) {
+          $("#intrumentalPanel").css("left", e.pageX - 20);
+          $("#intrumentalPanel").css("top", e.pageY - 20);
+        }
+      });
 });

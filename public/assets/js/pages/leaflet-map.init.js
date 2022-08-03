@@ -40,7 +40,7 @@ let addLayer = function (mapID) {
 //------------------------------------------------------------------------------
 $(document).ready(() => {
   //------------------------------------------------------------------------------
-  //Resize map after loading
+  //MAP: Resize after loading
   //------------------------------------------------------------------------------
   $("#leaflet-map").height($(document).height() - $(".topnav").height() + 2);
   $("#dashtoggle").on("hidden.bs.collapse", function() {
@@ -49,12 +49,73 @@ $(document).ready(() => {
   $("#dashtoggle").on("shown.bs.collapse", function() {
     $("#leaflet-map").height($(document).height() - $(".topnav").height() - $("#dashtoggle").height() + 2);
   });
+  //----------------------------------------------------------------------------
+  //MAP: Init
+  //----------------------------------------------------------------------------
+  map = L.map('leaflet-map', {
+     editable: true,
+     contextmenu: true,
+     //contextmenuWidth: 300,
+     contextmenuItems: [{
+       text: 'Add placemark',
+       iconCls: 'mdi mdi-pin-outline',
+       callback: addPlacemark
+     },
+     '-',
+     {
+       text: 'Force download map tile to cache',
+       callback: downloadTileMap,
+       iconCls: "mdi mdi-download-multiple"
+     },
+     {
+       text: 'Force download overlay tile to cache',
+       callback: downloadTileOverlay,
+       iconCls: "mdi mdi-download-multiple"
+     }]
+  }).setView([39, 0], 5);
+  //----------------------------------------------------------------------------
+  //CONTEXT MENU: Download tile for map
+  //----------------------------------------------------------------------------
+  function downloadTileMap (e) {
+    console.log(e);
+  }
+  //----------------------------------------------------------------------------
+  //CONTEXT MENU: Download tile for overlay
+  //----------------------------------------------------------------------------
+  function downloadTileOverlay (e) {
+    console.log(e);
+  }
+  //----------------------------------------------------------------------------
+  //CONTEXT MENU: Add placemark on map
+  //----------------------------------------------------------------------------
+  function addPlacemark (e) {
+    console.log(e);
+  }
+  //----------------------------------------------------------------------------
+  //MAP: Get map center from last viewing
+  //----------------------------------------------------------------------------
+  $.ajax({
+    url: "/map/center",
+    dataType: "json",
+    success: (response, code) => {
+      map.setView([response.lat, response.lng], response.zoom);
+    }
+  });
+  //----------------------------------------------------------------------------
+  //MAP: Update center coords
+  //----------------------------------------------------------------------------
+  map.on("moveend", function (e) {
+    let data = map.getCenter();
+    data.zoom = map.getZoom();
+    $.ajax({
+      url: "/map/position",
+      method: "post",
+      dataType: "json",
+      data: `lat=${data.lat}&lng=${data.lng}&zoom=${data.zoom}`
+    });
+  });
   //------------------------------------------------------------------------------
-  //Init Map
-  //------------------------------------------------------------------------------
-  map = L.map('leaflet-map').setView([39, 0], 5);
-  //------------------------------------------------------------------------------
-  //GPS handling
+  //GPS: Init
   //------------------------------------------------------------------------------
   let GPS = L.gps({
     socket: socket,
@@ -138,7 +199,7 @@ $(document).ready(() => {
         }
         break;
       case "gps-clear-history":
-        GPS.clearHistory();
+        GPS.clearHistry();
         break;
       default:
         alertify.warning("Function in progress");
@@ -195,7 +256,7 @@ $(document).ready(() => {
       default:
         $("#gps-record").removeClass("bg-secondary");
         break;
-    }
+    }id="exampleModalLabel"
     alertify.message(data.message);
   });
   socket.emit("gps-get-list");
@@ -219,14 +280,6 @@ $(document).ready(() => {
   let fillColor = "#1410db";
   let fillOpacity = 0.6;
   //------------------------------------------------------------------------------
-  //Set default style for geometry
-  //------------------------------------------------------------------------------
-  map.pm.setPathOptions({
-    color: color,
-    fillColor: fillColor,
-    fillOpacity: fillOpacity,
-  });
-  //------------------------------------------------------------------------------
   //Add info table for map
   //------------------------------------------------------------------------------
   var MyControl2 = L.Control.extend({
@@ -238,71 +291,10 @@ $(document).ready(() => {
       // create the control container with a particular class name
       var container = L.DomUtil.get('routeInfo');
       // ... initialize other DOM elements, add listeners, etc.
-
       return container;
     }
   });
   map.addControl(new MyControl2());
-
-  //L.PM.setOptIn(true);
-  map.pm.addControls({
-    position: 'topright',
-    drawCircle: false,
-    drawCircleMarker: false,
-    drawRectangle: false,
-    editMode: false,
-    dragMode: false,
-    cutPolygon: false,
-    removalMode: false,
-    rotateMode: false
-  });
-  //------------------------------------------------------------------------------
-  //Finish create geometry element on map
-  //------------------------------------------------------------------------------
-  map.on("pm:create", (e) => {
-    //Bind context menu for new element
-    e.marker.bindContextMenu({
-      contextmenu: true,
-      contextmenuWidth: 140,
-      contextmenuInheritItems: false,
-      contextmenuItems: [{
-        text: 'Edit',
-        callback: editGeometry//workingLayer.pm.enable()
-      },
-      '-',
-      {
-        text: 'Delete',
-        callback: deleteGeometry//workingLayer.remove()
-      }]
-    });
-    console.log(e.shape);
-    //Send data of element to server
-    let geometry = {
-      type: e.shape,
-      bounds: false,
-      color: color,
-      fillColor: fillColor,
-      fillOpacity: fillOpacity,
-      coords: [],
-      zoom: map.getZoom()
-    }
-    let coords = false;
-    switch(e.shape) {
-      case "Polygon":
-      case "Line":
-        geometry.coords = projectCoords(e.marker.getLatLngs());
-
-        geometry.bounds = e.marker.getBounds();
-        geometry.bounds._southWest = map.project(geometry.bounds._southWest);
-        geometry.bounds._northEast = map.project(geometry.bounds._northEast);
-        break;
-      case "Marker":
-        geometry.coords = map.project(e.marker.getLatLng());
-        break;
-    }
-
-    socket.emit("newGeometry", geometry);
-  });
   //------------------------------------------------------------------------------
   //Bottom bar add on map
   //------------------------------------------------------------------------------
@@ -326,7 +318,6 @@ $(document).ready(() => {
   //------------------------------------------------------------------------------
   //Response maps list from server
   //------------------------------------------------------------------------------
-
   socket.on("setMapList", (data) => {
     //console.log(data);
     $("#jobMap").html('');
@@ -337,7 +328,7 @@ $(document).ready(() => {
   	for(i = 0; i < data.length; i++) {
   		let mapInfo = data[i];
   		let tileLayer = L.tileLayer(`tile?map=${mapInfo.id}&z={z}&x={x}&y={y}`, {
-  			maxZoom: 18,
+  			maxZoom: 20,
   			attribution: mapInfo.attribution,
   			tileSize: mapInfo.tileSize,
   			zoomOffset: 0
@@ -422,6 +413,8 @@ $(document).ready(() => {
   //------------------------------------------------------------------------------
   //Recived geometry list from server
   //------------------------------------------------------------------------------
+  globalMarksList = {};
+
   socket.on("setGeometry", (geometry) => {
     for(i = 0; i < geometry.length; i++) {
       var latlngs = [];
@@ -452,25 +445,38 @@ $(document).ready(() => {
             color: geometry[i]['color'],
             fillColor: geometry[i]['fillColor'],
             fillOpacity: geometry[i]['fillOpacity'],
+            weight: geometry[i]['width'],
             contextmenu: true,
-            contextmenuWidth: 140,
-            contextmenuInheritItems: false,
-            contextmenuItems: [{
+            //contextmenuWidth: 140,
+            contextmenuInheritItems: true,
+            contextmenuItems: [
+            '-',
+            {
+              text: 'Properties',
+              callback: window.propertiesGeometry,
+              iconCls: "mdi mdi-application-cog",
+              disabled: true
+            },
+            {
               text: 'Edit',
-              callback: editGeometry
+              callback: editGeometry,
+              iconCls: "mdi mdi-circle-edit-outline"
             },
             {
               text: 'Start download job',
-              callback: showJobModal
+              callback: showJobModal,
+              iconCls: "mdi mdi-auto-download"
             },
             {
               text: 'Show tile cached map',
-              callback: showTileCachedMap
+              callback: showTileCachedMap,
+              iconCls: "mdi mdi-data-matrix-plus"
             },
             '-',
             {
               text: 'Delete',
-              callback: deleteGeometry
+              callback: deleteGeometry,
+              iconCls: "mdi mdi-delete-outline"
             }]
           }).addTo(map);
           break;
@@ -499,20 +505,21 @@ $(document).ready(() => {
       }
       workingGeometry.shape = geometry[i]['type'];
       workingGeometry.maptoriumID = geometry[i]['ID'];
+      globalMarksList[geometry[i]['ID']] = workingGeometry;
     }
 
   });
-  /*map.pm.enableDraw('Marker', {
-    snappable: true,
-    snapDistance: 20,
-  });*/
   //------------------------------------------------------------------------------
   //Tiled cached map
   //------------------------------------------------------------------------------
   let CachedMap = L.cachedmap();
   CachedMap.addTo(map);
   window.showTileCachedMap = function(e) {
-    socket.emit("getTileCachedMap", {ID: e.relatedTarget.maptoriumID});
+    let ID = e.relatedTarget.maptoriumID;
+    alertify.prompt("Enter zoom offset for cached map", "5", function(e, t) {
+      socket.emit("getTileCachedMap", {ID: ID, offset: map.getZoom() + parseInt(t)});
+    }).set({title: "Zoom offset"});
+
   }
   socket.on("setTileCachedMap", async (cachedMap) => {
     //cachedMap.setUrl(`cachedMap?z={z}&x={x}&y={y}&r=${Date.now()}`);
@@ -522,70 +529,86 @@ $(document).ready(() => {
   socket.on("updateTileCachedMap", async (tileInfo) => {
     CachedMap.updateTile(tileInfo);
   });
+
   //------------------------------------------------------------------------------
   //Context menu: EDIT GEOMETRY
   //------------------------------------------------------------------------------
   window.editGeometry = function (e) {
-    //Show button to save result
-    saveButton = L.easyButton( `<a class="nav-link dropdown-toggle arrow-none" href="#" id="topnav-pages" role="button">
-                                  <span data-key="t-apps"></span>
-                                </a>`, function(){
-      //Remove button from map
-      saveButton.remove();
-      //If we have alredy edited geometry
-      if(lastGeometry) {
-        //Hide editing vortex
-        lastGeometry.pm.disable();
-        //Init geometry OBJ
-        let geometry = {
-          ID: lastGeometry.maptoriumID,
-          type: lastGeometry.shape,
-          bounds: false,
-          color: color,
-          fillColor: fillColor,
-          fillOpacity: fillOpacity
-        }
-        //Add bounds and LngLat arrays
-        switch(lastGeometry.shape) {
-          case "Polygon":
-          case "Line":
-            geometry.coords = coordProject(lastGeometry.getLatLngs());
-            geometry.bounds = lastGeometry.getBounds();
-            geometry.bounds._southWest = map.project(geometry.bounds._southWest);
-            geometry.bounds._northEast = map.project(geometry.bounds._northEast);
-            break;
-          case "Marker":
-            geometry.coords = map.project(lastGeometry.getLatLng());
-            break;
-        }
-        geometry.zoom = map.getZoom();
-        //Send data to server
-        socket.emit("updateGeometry", geometry);
-      }
-    }).addTo(map);
-    //If we have last geometry
     if(lastGeometry) {
-      //Hide editing vortex
-      lastGeometry.pm.disable();
+      lastGeometry.disableEdit();
     }
-    //Enable editing vortex for current geometry
-    e.relatedTarget.pm.enable();
-    //Save current geometry into var
+    console.log(e.relatedTarget.maptoriumID);
+    e.relatedTarget.enableEdit();
+    $("#intrumentalPanel").show();
     lastGeometry = e.relatedTarget;
   }
-  //------------------------------------------------------------------------------
-  //Context menu: DELETE GEOMETRY
-  //------------------------------------------------------------------------------
-  window.deleteGeometry = function(e) {
-    //Send to server ID of geometry
-    socket.emit("deleteGeometry", e.relatedTarget.maptoriumID);
-    //Remove geometry from map
-    e.relatedTarget.remove();
-  }
+
+  function coordProject(coords) {
+    let projCoords = [];
+    for(i = 0; i < coords.length; i++) {
+      if(Array.isArray(coords[i])) {
+        coordProject = []
+        for(a = 0; a < coords[i].length; a++) {
+          coordProject.push(map.project(coords[i][a]));
+        }
+        projCoords.push(coordProject);
+      }
+      else {
+        projCoords.push(map.project(coords[i]));
+      }
+    }
+    return projCoords;
+}
+  //----------------------------------------------------------------------------
+  //INSTRUMENTAL PANEL: Save button click
+  //----------------------------------------------------------------------------
+  $("#panelSaveBtn").on("click", (e) => {
+    lastGeometry.disableEdit();
+    $("#intrumentalPanel").hide();
+    if(lastGeometry) {
+      //Init geometry OBJ
+      let geometry = {
+        markID: lastGeometry.maptoriumID,
+        type: lastGeometry.shape,
+        bounds: false,
+      }
+      //Add bounds and LngLat arrays
+      switch(lastGeometry.shape) {
+        case "Polygon":
+        case "Line":
+          geometry.coords = coordProject(lastGeometry.getLatLngs());
+          geometry.bounds = lastGeometry.getBounds();
+          geometry.bounds._southWest = map.project(geometry.bounds._southWest);
+          geometry.bounds._northEast = map.project(geometry.bounds._northEast);
+          break;
+        case "Marker":
+          geometry.coords = map.project(lastGeometry.getLatLng());
+          break;
+      }
+      geometry.zoom = map.getZoom();
+      //Send data to server
+      //$.ajax({
+        //method: "post",
+        //url: "/marks/update",
+        //dataType: "json",
+        //data: JSON.stringify(geometry),
+        //success: (response, code) => {
+          //if(response.result) {
+            //alertify.success(response.message);
+          //}
+          //else {
+            //alertify.error(response.message);
+          //}
+        //}
+      //});
+      socket.emit("updateGeometry", geometry);
+    }
+  });
   //------------------------------------------------------------------------------
   //Show confog window for job order
   //------------------------------------------------------------------------------
   window.showJobModal = function(e) {
+    console.log(e);
     $("#polygonID").val(e.relatedTarget.maptoriumID);
     $("#jobModal").modal('show');
   }

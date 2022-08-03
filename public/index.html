@@ -12,15 +12,17 @@
         <link rel="shortcut icon" href="assets/images/favicon.ico">
         <!-- alertifyjs Css -->
         <link href="assets/libs/alertifyjs/build/css/alertify.min.css" rel="stylesheet" type="text/css" />
+        <!-- One of the following themes -->
+        <link rel="stylesheet" href="assets/libs/%40simonwep/pickr/themes/classic.min.css"/> <!-- 'classic' theme -->
         <!-- alertifyjs default themes  Css -->
         <link href="assets/libs/alertifyjs/build/css/themes/default.min.css" rel="stylesheet" type="text/css" />
 
         <!-- leaflet Css -->
         <link href="assets/libs/leaflet/leaflet.css" rel="stylesheet" type="text/css" />
         <link href="assets/libs/leaflet/L.Control.Bar.css" rel="stylesheet">
-        <link href="assets/libs/leaflet/leaflet.contextmenu.css" rel="stylesheet">
         <link href="assets/libs/leaflet/easy-button.css" rel="stylesheet">
-        <link href="assets/libs/leaflet/leaflet-geoman.css" rel="stylesheet" type="text/css" />
+        <!-- Tree List -->
+        <link href="assets/css/tree.list.css" rel="stylesheet" type="text/css" />
         <!-- Bootstrap Css -->
         <link href="assets/css/bootstrap.min.css" id="bootstrap-style" rel="stylesheet" type="text/css" />
         <!-- Icons Css -->
@@ -95,10 +97,19 @@
                                           <i class="mdi mdi-globe-model icon"></i>
                                           <span data-key="t-apps">Mode</span> <div class="arrow-down"></div>
                                         </a>
-                                        <div class="dropdown-menu" aria-labelledby="topnav-pages" id="layers-list">
+                                        <div class="dropdown-menu" aria-labelledby="topnav-pages">
                                           <div class="dropdown"><a class="dropdown-item" href="#" role="button" data-key="t-change-mode" mode-val="enable">Internet</a></div>
                                           <div class="dropdown"><a class="dropdown-item" href="#" role="button" data-key="t-change-mode" mode-val="disable">Cache</a></div>
                                           <div class="dropdown"><a class="dropdown-item" href="#" role="button" data-key="t-change-mode" mode-val="force">Forced</a></div>
+                                        </div>
+                                      </li>
+                                      <li class="nav-item dropdown">
+                                        <a class="nav-link dropdown-toggle arrow-none" href="#" role="button">
+                                          <i class="mdi mdi-playlist-edit icon"></i>
+                                          <span data-key="t-plavemarks">Placemarks</span> <div class="arrow-down"></div>
+                                        </a>
+                                        <div class="dropdown-menu" aria-labelledby="topnav-pages">
+                                          <div class="dropdown"><a class="dropdown-item" href="#" role="button" id="t-placemarks-manager" mode-val="enable">Placemarks manager</a></div>
                                         </div>
                                       </li>
                                       <li class="nav-item dropdown">
@@ -661,6 +672,147 @@
         <!-- Right bar overlay-->
         <div class="rightbar-overlay"></div>
         <!-- /Right bar overlay-->
+        <!--Modal for Marks Manager-->
+        <div class="modal fade" id="marksManagerModal" tabindex="-1" role="dialog" aria-labelledby="marksManagerModal" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Placemarks Manager</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class='row'>
+                  <div class="col-5">
+                    <div class="card">
+                      <div class="card-header justify-content-between d-flex align-items-center">
+                        <h4 class="card-title">Categories</h4>
+                         <div class="flex-shrink-0">
+                          <button type="button" class="btn btn-soft-success" id="categoryAddBtn"><i class="mdi mdi-note-plus-outline"></i></button>
+                          <button type="button" class="btn btn-soft-info"><i class="mdi mdi-square-edit-outline"></i></button>
+                          <button type="button" class="btn btn-soft-danger"><i class="mdi mdi-delete-alert-outline"></i></button>
+                        </div>
+                      </div><!-- end card header -->
+                      <div class="card-body">
+                        <ul class="directory-list" id="managerCategoryList">
+                          <li class="folder">Empty category</li>
+                        </ul>
+                      </div>
+                  </div>
+                </div>
+                  <div class="col-7">
+                    <div class="card">
+                      <div class="card-header justify-content-between d-flex align-items-center">
+                        <h4 class="card-title">Marks</h4>
+                         <div class="flex-shrink-0">
+                           <button type="button" class="btn btn-soft-info" id="btnMarkEdit"><i class="mdi mdi-square-edit-outline"></i></button>
+                           <button type="button" class="btn btn-soft-danger"><i class="mdi mdi-delete-alert-outline"></i></button>
+                         </div>
+                    </div>
+                    <div class="card-body">
+                      <ul class="directory-list" id="managerMarksList">
+                        <li><a href="#" markID="0">Empty list</a></li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!--/Modal for Marks manager-->
+        <!--Modal for Marks properties-->
+        <div class="modal fade" id="marksPropertiesModal" tabindex="-1" role="dialog" aria-labelledby="marksPropertiesModal" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Marks Properties</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form id="markPropertiesForm" width="100%">
+                  <input type="hidden" name="markID" value="0" id="marksPropertiesID">
+                  <div class="row mb-3">
+                    <label class="col-md-2 col-form-label">Category: </label>
+                    <div class="col-md-10">
+                      <select class="form-select" id="marksCategoryList2" name="categoryID">
+                        <option>Select</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="mb-3 row">
+                    <label for="example-text-input" class="col-md-2 col-form-label">Name: </label>
+                    <div class="col-md-10">
+                      <input class="form-control" type="text" value="Default mark" name="name">
+                    </div>
+                  </div>
+                  <div class="row">
+                      <div class="col-md-4">
+                          <div class="mb-3">
+                              <label class="form-label" for="formrow-email-input">Color</label>
+                              <div id="mpColor"></div>
+                          </div>
+                      </div><!-- end col -->
+                      <div class="col-md-4">
+                          <div class="mb-3">
+                              <label class="form-label" for="formrow-password-input">Width</label>
+                              <input class="form-control" type="number" value="1" name="width">
+                          </div>
+                      </div><!-- end col -->
+                      <div class="col-md-4">
+                          <div class="mb-3">
+                            <label class="form-label" for="formrow-email-input">Fill Color</label>
+                            <div id="mpFillColor"></div>
+                          </div>
+                      </div><!-- end col -->
+                  </div><!-- end row -->
+                </form>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="marksPropertiesSave">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!--/Modal for Marks properties-->
+        <!--Modal for Marks properties-->
+        <div class="modal fade" id="marksCategoryModal" tabindex="-1" role="dialog" aria-labelledby="marksCategoryModal" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Add category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form id="formAddCategory" width="100%">
+                  <div class="row mb-3">
+                    <label class="col-md-2 col-form-label">Parent category: </label>
+                    <div class="col-md-10">
+                      <select class="form-select" name="parentID" id="marksCategoryList">
+                        <option value="0">Root</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="mb-3 row">
+                    <label for="example-text-input" class="col-md-2 col-form-label">Name: </label>
+                    <div class="col-md-10">
+                      <input class="form-control" type="text" value="New category" name="name">
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="formCategoryClose">Close</button>
+                <button type="button" class="btn btn-primary" id="formCategorySave">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!--/Modal for Marks properties-->
         <!--Modal for Download job-->
         <div class="modal fade" id="jobModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
@@ -841,6 +993,16 @@
           </div>
         </div>
         <!--/Modal for Download job-->
+        <!--Panel for marks editing-->
+        <div style="z-index: 2000; position: absolute; left: 100px; top: 400px; background-color: white; display: none;" id="intrumentalPanel">
+          <button type="button" class="btn btn-light" id="panelMoveBtn"><i class="mdi mdi-cursor-move"></i></button>
+          <div class="btn-group mt-4 mt-md-0" role="group" aria-label="Basic example">
+            <button type="button" class="btn btn-light" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete point" data-bs-original-title="Delete point"><i class="mdi mdi-delete-circle-outline"></i></button>
+            <button type="button" class="btn btn-light" id="panelSaveBtn" data-bs-toggle="tooltip" data-bs-placement="top" title="Save" data-bs-original-title="Save"><i class="mdi mdi-content-save-outline"></i></button>
+            <button type="button" class="btn btn-light" data-bs-toggle="tooltip" data-bs-placement="top" title="Save as new..." data-bs-original-title="Save as new..."><i class="mdi mdi-content-save-all"></i></button>
+          </div>
+        </div>
+        <!--/Panel for marks editing-->
     </body>
     <!-- JAVASCRIPT -->
     <script src="/socket.io/socket.io.js"></script>
@@ -850,15 +1012,17 @@
     <script src="assets/libs/metismenujs/metismenujs.min.js"></script>
     <script src="assets/libs/simplebar/simplebar.min.js"></script>
     <script src="assets/libs/feather-icons/feather.min.js"></script>
+    <!-- Modern colorpicker bundle -->
+    <script src="assets/libs/%40simonwep/pickr/pickr.min.js"></script>
     <!-- apexcharts -->
     <script src="assets/libs/apexcharts/apexcharts.min.js"></script>
     <!-- alertifyjs js -->
     <script src="assets/libs/alertifyjs/build/alertify.min.js"></script>
     <!-- leaflet plugin -->
     <script src="assets/libs/leaflet/leaflet.js"></script>
+    <script src="assets/libs/leaflet/Leaflet.Editable.js"></script>
     <script src="assets/libs/leaflet/Marker.Rotate.js"></script>
     <script src="assets/libs/leaflet/polyline.distance.js"></script>
-    <script src="assets/libs/leaflet/leaflet-geoman.min.js"></script>
     <script src="assets/libs/leaflet/L.Control.Bar.js"></script>
     <script src="assets/libs/leaflet/leaflet.tilegrid.js"></script>
     <script src="assets/libs/leaflet/leaflet.gps.js"></script>

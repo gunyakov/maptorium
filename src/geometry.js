@@ -24,7 +24,7 @@ class Geometry {
   async open() {
     this.time = Math.floor(Date.now() / 1000);
     if(this.state != "open") {
-      await sqlite3.open(this._dbName).catch((error) => {Log.make("error", "DB", error) });
+      await sqlite3.open(this._dbName);
       this.state = "open";
       //Make log
       Log.make("info", "DB", "OPEN -> " + this._dbName);
@@ -32,20 +32,28 @@ class Geometry {
     return;
   }
 
-  async get(ID = 0) {
+  async get(ID = 0, categoryID = 0) {
     await this.open();
     let result = false;
-    if(ID == 0) {
-      result = await sqlite3.all(this._dbName, "SELECT * FROM geometry;", []).catch((error) => {Log.make("error", "DB", error)  });
+    if(ID == 0 && categoryID == 0) {
+      result = await sqlite3.all(this._dbName, "SELECT * FROM geometry;", []);
     }
     else {
-      result = await sqlite3.all(this._dbName, "SELECT * FROM geometry WHERE ID = ?;", [ID]).catch((error) => {Log.make("error", "DB", error)  });
+      if(ID > 0 && categoryID == 0) {
+        result = await sqlite3.all(this._dbName, "SELECT * FROM geometry WHERE ID = ?;", [ID]);
+      }
+      if(ID == 0 && categoryID > 0) {
+        result = await sqlite3.all(this._dbName, "SELECT * FROM geometry WHERE categoryID = ?;", [categoryID]);
+      }
+      if(ID > 0 && categoryID > 0) {
+        result = await sqlite3.all(this._dbName, "SELECT * FROM geometry WHERE ID = ? AND categoryID = ?;", [ID, categoryID]);
+      }
     }
     if(result.length > 0) {
       let points = false;
       let responce = [];
       for(i = 0; i < result.length; i++) {
-        points = await sqlite3.all(this._dbName, "SELECT * FROM points WHERE geometryID = ?;", [result[i]['ID']]).catch((error) => {Log.make("error", "DB", error)  });
+        points = await sqlite3.all(this._dbName, "SELECT * FROM points WHERE geometryID = ?;", [result[i]['ID']]);
         if(points && points.length > 0) {
           let geometry = result[i];
           geometry.points = points;
@@ -64,13 +72,13 @@ class Geometry {
     let SQL = "INSERT INTO geometry('categoryID', 'name', 'type', 'color', 'fillColor', 'fillOpacity', 'zoom', 'SWx', 'SWy', 'NEx', 'NEy') VALUES(1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     let SQLValues = ['', geometry.type, geometry.color, geometry.fillColor, geometry.fillOpacity, geometry.zoom, 0, 0, 0, 0];
 
-    await sqlite3.run(this._dbName, SQL, SQLValues).catch((error) => { Log.make("error", "DB", error)  });
-    let lastID = await sqlite3.get(this._dbName, "SELECT * FROM geometry WHERE name = ? ORDER BY ID DESC LIMIT 1;", ['']).catch((error) => { Log.make("error", "DB", error)  });
+    await sqlite3.run(this._dbName, SQL, SQLValues);
+    let lastID = await sqlite3.get(this._dbName, "SELECT * FROM geometry WHERE name = ? ORDER BY ID DESC LIMIT 1;", ['']);
     if(typeof lastID !== "undefined") {
       if(geometry.bounds) {
         SQL = "UPDATE geometry SET SWx = ?, SWy = ?, NEx = ?, NEy = ? WHERE ID = ?;";
         SQLValues = [geometry.bounds._southWest.x, geometry.bounds._southWest.y, geometry.bounds._northEast.x, geometry.bounds._northEast.y, lastID.ID];
-        await sqlite3.run(this._dbName, SQL, SQLValues).catch((error) => { Log.make("error", "DB", error)  });
+        await sqlite3.run(this._dbName, SQL, SQLValues);
       }
       await this.savePoints(lastID.ID, geometry.type, geometry.coords);
       return lastID.ID;
@@ -86,11 +94,11 @@ class Geometry {
           coords = coords[0];
         case "Line":
           for(i = 0; i < coords.length; i++) {
-            await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, coords[i]['x'], coords[i]['y']]).catch((error) => { Log.make("error", "DB", error)  });
+            await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, Math.round(coords[i]['x']), Math.round(coords[i]['y'])]);
           }
           break;
         case "Marker":
-          await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, coords['x'], coords['y']]).catch((error) => { Log.make("error", "DB", error)  });
+          await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, Math.round(coords['x']), Math.round(coords['y'])]);
           break;
       }
   }
@@ -101,42 +109,91 @@ class Geometry {
     //If not update of geometry
     if(!onlyPoints) {
       //Delete entry of geometry
-      await sqlite3.run(this._dbName, "DELETE FROM geometry WHERE ID = ?;", [ID]).catch((error) => {Log.make("error", "DB", error) });
+      await sqlite3.run(this._dbName, "DELETE FROM geometry WHERE ID = ?;", [ID]);
     }
     //Delete points of geometry
-    await sqlite3.run(this._dbName, "DELETE FROM points WHERE geometryID = ?;", [ID]).catch((error) => {Log.make("error", "DB", error) });
+    await sqlite3.run(this._dbName, "DELETE FROM points WHERE geometryID = ?;", [ID]);
     //Exit
     return;
   }
   //----------------------------------------------------------------------------
-  //Uodate geometry style/info/points in DB
+  //Update geometry style/info/points in DB
   //----------------------------------------------------------------------------
-  async update(geometry) {
+  async update(data, onlyPoints = false) {
     //Open DB (if not yet opened)
     await this.open();
-    //Update style of geometry
-    let SQL = "UPDATE geometry SET color = ?, fillColor = ?, fillOpacity = ?, zoom = ? WHERE ID = ?;"
-    let SQLValues = [geometry.color, geometry.fillColor, geometry.fillOpacity, geometry.zoom, geometry.ID];
-    await sqlite3.run(this._dbName, SQL, SQLValues).catch((error) => {Log.make("error", "DB", error) });
-    //Update bounds of geometry if present
-    if(geometry.bounds) {
-      SQL = "UPDATE geometry SET SWx = ?, SWy = ?, NEx = ?, NEy = ? WHERE ID = ?;";
-      SQLValues = [geometry.bounds._southWest.x, geometry.bounds._southWest.y, geometry.bounds._northEast.x, geometry.bounds._northEast.y, geometry.ID];
-      await sqlite3.run(this._dbName, SQL, SQLValues).catch((error) => {Log.make("error", "DB", error) });
+    let SQL = "";
+    let SQLValues = [];
+    let result = true;
+    if(!onlyPoints) {
+      //Update style of geometry
+      SQL = "UPDATE geometry SET categoryID = ?, name = ?, width = ?, fillOpacity = ?, color = ?, fillColor = ? WHERE ID = ?;";
+      SQLValues = [data.categoryID, data.name, data.width, data.fillOpacity, data.color, data.fillColor, parseInt(data.markID)];
+      result = await sqlite3.run(this._dbName, SQL, SQLValues);
     }
-    //Delete only points
-    await this.delete(geometry.ID, true);
-    //Insert new points in DB
-    await this.savePoints(geometry.ID, geometry.type, geometry.coords);
+    //Update bounds of geometry if present
+    if(data.bounds) {
+      SQL = "UPDATE geometry SET SWx = ?, SWy = ?, NEx = ?, NEy = ?, zoom = ? WHERE ID = ?;";
+      SQLValues = [Math.round(data.bounds._southWest.x), Math.round(data.bounds._southWest.y), Math.round(data.bounds._northEast.x), Math.round(data.bounds._northEast.y), data.zoom, data.markID];
+      result = await sqlite3.run(this._dbName, SQL, SQLValues);
+    }
+    if(data.coords) {
+      SQL = "DELETE FROM points WHERE geometryID = ?;";
+      await sqlite3.run(this._dbName, SQL, [data.markID]);
+      result = await this.savePoints(data.markID, data.type, data.coords);
+    }
     //Exit
-    return;
+    return result;
+  }
+  //----------------------------------------------------------------------------
+  //CATEGORY: Get list of
+  //----------------------------------------------------------------------------
+  async categoryList() {
+    //Open DB (if not yet opened)
+    await this.open();
+    let SQL = "SELECT * FROM category;";
+    let categoryList = await sqlite3.all(this._dbName, SQL);
+    if(categoryList) {
+      return categoryList;
+    }
+    else {
+      return false;
+    }
+  }
+  //----------------------------------------------------------------------------
+  //CATEGORY: Add to DB
+  //----------------------------------------------------------------------------
+  async categoryAdd(name, parentID = 0) {
+    //Open DB (if not yet opened)
+    await this.open();
+    let SQL = "";
+    //Check if parentID category in DB
+    if (parentID) {
+      SQL = "SELECT * FROM category WHERE ID = ?;";
+      let categoryList = await sqlite3.all(this._dbName, SQL, [parentID]);
+      if (!categoryList) {
+        return false;
+      }
+    }
+    else {
+      parentID = 0;
+    }
+    SQL = "INSERT INTO category('name', 'parentID') VALUES(?, ?);";
+    let result = await sqlite3.run(this._dbName, SQL, [name, parentID]);
+    if(result) {
+      Log.make("info", "DB", "INSERT -> " + this._dbName);
+      return true;
+    }
+    else {
+      return false;
+    }
   }
 
   async routeAddRoute(name = "New Route") {
     //Open DB (if not yet opened)
     await this.open();
     let SQL = "INSERT INTO routeList('name', 'distance') VALUES(?, ?);";
-    await sqlite3.run(this._dbName, SQL, [name, 0]).catch((error) => {Log.make("error", "DB", error) });
+    await sqlite3.run(this._dbName, SQL, [name, 0]);
     await this.routeGetID();
     Log.make("info", "DB", "INSERT -> " + this._dbName);
     return true;
@@ -148,7 +205,7 @@ class Geometry {
         let SQL = "INSERT INTO routeCoords('routeID', 'lat', 'lon', 'date') VALUES(?, ?, ?, 'unixepoch')";
         //Open DB (if not yet opened)
         await this.open();
-        await sqlite3.run(this._dbName, SQL, [this.routeID, lat, lng]).catch((error) => {Log.make("error", "DB", error) });
+        await sqlite3.run(this._dbName, SQL, [this.routeID, lat, lng]);
         Log.make("info", "DB", "INSERT -> " + this._dbName);
       }
       else {
@@ -170,7 +227,7 @@ class Geometry {
       routeID = ID;
     }
     //Exex SQL request
-    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeCoords WHERE routeID=? ORDER BY ID;", [routeID]).catch((error) => {Log.make("error", "DB", error)  });
+    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeCoords WHERE routeID=? ORDER BY ID;", [routeID]);
     //If have point for route in DB
     if(result.length > 0) {
       //Form data
@@ -191,7 +248,7 @@ class Geometry {
   async routeGetID() {
     //Get last route ID in DB
     await this.open();
-    let result = await sqlite3.all(this._dbName, "SELECT MAX(ID) as IDMAX FROM routeList;").catch((error) => {Log.make("error", "DB", error)  });
+    let result = await sqlite3.all(this._dbName, "SELECT MAX(ID) as IDMAX FROM routeList;");
     if(result.length > 0) {
       if(this.routeID < result[0]['IDMAX']) {
         this.routeID = result[0]['IDMAX'];
@@ -206,7 +263,7 @@ class Geometry {
   async routeGetList() {
     await this.open();
     //Get routes list from DB
-    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeList;").catch((error) => {Log.make("error", "DB", error)});
+    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeList;");
     //If have route list in DB
     if(result.length > 0) {
       //Return
@@ -226,7 +283,7 @@ class Geometry {
       //Check last DB query time
       let dbTimeOpen = Math.floor(Date.now() / 1000) - this.time;
       if(dbTimeOpen > config.db.OpenTime && this.state == "open") {
-        await sqlite3.close(this._dbName).catch((error) => { Log.make("error", "DB", error) });
+        await sqlite3.close(this._dbName);
         Log.make("info", "DB", "CLOSE -> " + this._dbName);
         this.state = "close";
       }

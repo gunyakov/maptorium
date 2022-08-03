@@ -62,6 +62,9 @@ let tileCachedList = {};
 //Static files for browser map
 //------------------------------------------------------------------------------
 app.use(express.static(process.mainModule.path + '/public'));
+
+app.use('/marks', require('./routes/marks.js'));
+app.use('/map', require('./routes/map.js'));
 //------------------------------------------------------------------------------
 //HTTP Server: GET request for tiles
 //------------------------------------------------------------------------------
@@ -466,17 +469,11 @@ IO.on('connection', async function(socket){
     await GEOMETRY.save(geometry);
   });
   //----------------------------------------------------------------------------
-  //Delete polygons/points (geometry) from map
-  //----------------------------------------------------------------------------
-  socket.on("deleteGeometry", async (ID) => {
-    Log.make("info", "MAIN", `Request to delete geometry ${ID}.`);
-    await GEOMETRY.delete(ID);
-  });
-  //----------------------------------------------------------------------------
   //Update polygons/points (geometry) in DB
   //----------------------------------------------------------------------------
   socket.on("updateGeometry", async (geometry) => {
-    await GEOMETRY.update(geometry);
+    console.log(geometry);
+    await GEOMETRY.update(geometry, true);
   });
   //----------------------------------------------------------------------------
   //Tile Cached Map
@@ -484,7 +481,7 @@ IO.on('connection', async function(socket){
   socket.on("getTileCachedMap", async (mapInfo) => {
     let map = "googlesat";
     let mapObj = arrMaps[map];
-    let requiredZoom = 7;
+    let requiredZoom = mapInfo.offset;
     let tempArr = await GEOMETRY.tileList(mapInfo.ID, requiredZoom, map);
     let time = Date.now();
     Log.make("info", "MAIN", "Start checking tiles in DB for cached map.");

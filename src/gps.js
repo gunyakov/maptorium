@@ -14,7 +14,7 @@ class GPS {
     this.enable = false;
     this.record = true;
     this.sampleRateTime = 60000;
-    this.start();
+    //this.start();
   }
 
   async on(callback) {

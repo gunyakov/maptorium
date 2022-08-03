@@ -27,23 +27,29 @@
   "homepage": "https://github.com/gunyakov/maptorium#readme",
   "dependencies": {
     "axios": "^0.25.0",
-    "canvas": "^2.9.0",
-    "cheerio": "^1.0.0-rc.10",
+    "body-parser": "^1.20.0",
+    "cheerio": "^1.0.0-rc.12",
     "colors": "^1.4.0",
     "crc-32": "^1.2.1",
     "express": "^4.17.2",
     "https-proxy-agent": "^5.0.0",
-    "leaflet": "^1.7.1",
+    "jsonfile": "^6.1.0",
     "md5": "^2.3.0",
     "point-in-polygon": "^1.1.0",
     "socket.io": "^4.4.1",
     "socket.io-client": "^4.4.1",
     "socks-proxy-agent": "^6.1.1",
-    "sqlite3": "https://github.com/mapbox/node-sqlite3/tarball/master"
+    "sqlite3": "^5.0.10"
   },
   "pkg": {
-    "scripts": ["src/*.js", "maps/*.js", "public/*"],
-    "targets": ["node16-win-x64"],
+    "scripts": [
+      "src/*.js",
+      "maps/*.js",
+      "public/*"
+    ],
+    "targets": [
+      "node16-win-x64"
+    ],
     "outputPath": "."
   }
 }

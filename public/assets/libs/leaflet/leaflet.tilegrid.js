@@ -9,7 +9,8 @@ L.TileGrid = L.Class.extend({
     showText: true,
     color: '#3388ff',
     weight: 1,
-    opacity: 0.5
+    fillOpacity: 0.5,
+    fillColor: '#444444'
 	},
   initialize: function (options) {
 		L.setOptions(this, options);
@@ -96,7 +97,7 @@ L.TileGrid = L.Class.extend({
   		pointB = this._map.unproject(L.point(xCoord, y2 * scaleFactor));
   		pointList = [pointA, pointB];
   		firstpolyline = new L.Polyline(pointList, {
-  	    color: '#3388ff',
+  	    color: this.options.color,
   			weight: 1
   		});
   		gridGroupe.addLayer(firstpolyline);
@@ -108,7 +109,7 @@ L.TileGrid = L.Class.extend({
   		pointB = this._map.unproject(L.point(x2 * scaleFactor, yCoord));
   		pointList = [pointA, pointB];
   		firstpolyline = new L.Polyline(pointList, {
-  	    color: '#3388ff',
+  	    color: this.options.color,
   			weight: 1
   		});
       gridGroupe.addLayer(firstpolyline);
@@ -194,6 +195,10 @@ L.TileGrid = L.Class.extend({
         contextmenuWidth: 140,
         contextmenuInheritItems: false,
         contextmenuItems: [{
+          text: 'Properties',
+          callback: window.propertiesGeometry
+        },
+        {
           text: 'Edit',
           callback: window.editGeometry
         },

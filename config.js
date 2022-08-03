@@ -25,9 +25,9 @@ let config = {
   },
   proxy: {
     //Use proxy or not (true or false)
-    enable: true,
+    enable: false,
     //Enable tor change ID
-    tor: true,
+    tor: false,
     //Type of proxy(socks, socks4, socks5, http, https)
     protocol: "socks5",
     //Host can be IP or domain
