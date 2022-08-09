@@ -89,18 +89,20 @@ class Geometry {
   }
 
   async savePoints(ID, type, coords) {
-      switch(type) {
-        case "Polygon":
-          coords = coords[0];
-        case "Line":
-          for(i = 0; i < coords.length; i++) {
-            await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, Math.round(coords[i]['x']), Math.round(coords[i]['y'])]);
-          }
-          break;
-        case "Marker":
-          await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, Math.round(coords['x']), Math.round(coords['y'])]);
-          break;
-      }
+    let result = true;
+    switch(type) {
+      case "Polygon":
+        coords = coords[0];
+      case "Line":
+        for(i = 0; i < coords.length; i++) {
+          result = await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, Math.round(coords[i]['x']), Math.round(coords[i]['y'])]);
+        }
+        break;
+      case "Marker":
+        result = await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, Math.round(coords['x']), Math.round(coords['y'])]);
+        break;
+    }
+    return result;
   }
 
   async delete(ID, onlyPoints = false) {
@@ -297,71 +299,73 @@ class Geometry {
   async tileList(ID, requiredZoom, map = "google") {
     Log.make('info', "MAIN", `Start calculation tiles list for polygon ${ID} and zoom ${requiredZoom}`);
     let geometry = await this.get(parseInt(ID));
-    geometry = geometry[0];
-    if(geometry.type == "Polygon") {
-      let arrJobTilesList = [];
-      let zoom = geometry.zoom;
-      let scaleFactor = requiredZoom - zoom;
-      if(requiredZoom - zoom >= 0) {
-        scaleFactor = Math.pow(2, scaleFactor);
+    if(geometry) {
+      geometry = geometry[0];
+      if(geometry.type == "Polygon") {
+        let arrJobTilesList = [];
+        let zoom = geometry.zoom;
+        let scaleFactor = requiredZoom - zoom;
+        if(requiredZoom - zoom >= 0) {
+          scaleFactor = Math.pow(2, scaleFactor);
+        }
+        else {
+          Log.make('warning', "MAIN", "Abort tiles calculation. Required Zoom is same as selected zoom.");
+          return false;
+        }
+        //Init empty polygon coords list
+        let polygon = [];
+        //For all points in polygon
+        for(i = 0; i < geometry.points.length; i++) {
+          //Form polygon array
+          polygon.push([Math.round(geometry.points[i]['x'] * scaleFactor), Math.round(geometry.points[i]['y'] * scaleFactor)]);
+        }
+        var startX = Math.floor(geometry.SWx * scaleFactor / 256);
+      	var startY = Math.floor(geometry.NEy * scaleFactor / 256);
+      	var stopX = Math.ceil(geometry.NEx * scaleFactor / 256);
+      	var stopY = Math.ceil(geometry.SWy * scaleFactor / 256);
+        //Generate tiles list by polygon bounds
+        for(let x = startX; x < stopX; x++) {
+          for(let y = startY; y < stopY; y++) {
+            //Init tile inside polygon state
+            let tileInside = false;
+            //Check all 4 corners to be inside polygon
+            if(pointInPolygon([ x * 256, y * 256 ], polygon)) {
+              //Set tile state inside
+              tileInside = true;
+            }
+            if(pointInPolygon([ x * 256 + 256, y * 256 ], polygon)) {
+              //Set tile state inside
+              tileInside = true;
+            }
+            if(pointInPolygon([ x * 256 + 256, y * 256 + 256], polygon)) {
+              //Set tile state inside
+              tileInside = true;
+            }
+            if(pointInPolygon([ x * 256, y * 256 + 256], polygon)) {
+              //Set tile state inside
+              tileInside = true;
+            }
+            if(tileInside) {
+              //Добавляем в список координаты тайлов
+              arrJobTilesList.push({
+                x: parseInt(x),
+                y: parseInt(y),
+                z: parseInt(requiredZoom),
+                response: false,
+                map: map
+              });
+            }
+
+          }
+        }
+        Log.make("info", "MAIN", `Calculation of tiles list is finished. Total ${arrJobTilesList.length} tiles.`);
+        //Return tiles job list
+        return arrJobTilesList;
       }
       else {
-        Log.make('warning', "MAIN", "Abort tiles calculation. Required Zoom is same as selected zoom.");
+        Log.make('warning', "MAIN", "Abort tiles calculation. Geometry type isnt Polygon.");
         return false;
       }
-      //Init empty polygon coords list
-      let polygon = [];
-      //For all points in polygon
-      for(i = 0; i < geometry.points.length; i++) {
-        //Form polygon array
-        polygon.push([Math.round(geometry.points[i]['x'] * scaleFactor), Math.round(geometry.points[i]['y'] * scaleFactor)]);
-      }
-      var startX = Math.floor(geometry.SWx * scaleFactor / 256);
-    	var startY = Math.floor(geometry.NEy * scaleFactor / 256);
-    	var stopX = Math.ceil(geometry.NEx * scaleFactor / 256);
-    	var stopY = Math.ceil(geometry.SWy * scaleFactor / 256);
-      //Generate tiles list by polygon bounds
-      for(let x = startX; x < stopX; x++) {
-        for(let y = startY; y < stopY; y++) {
-          //Init tile inside polygon state
-          let tileInside = false;
-          //Check all 4 corners to be inside polygon
-          if(pointInPolygon([ x * 256, y * 256 ], polygon)) {
-            //Set tile state inside
-            tileInside = true;
-          }
-          if(pointInPolygon([ x * 256 + 256, y * 256 ], polygon)) {
-            //Set tile state inside
-            tileInside = true;
-          }
-          if(pointInPolygon([ x * 256 + 256, y * 256 + 256], polygon)) {
-            //Set tile state inside
-            tileInside = true;
-          }
-          if(pointInPolygon([ x * 256, y * 256 + 256], polygon)) {
-            //Set tile state inside
-            tileInside = true;
-          }
-          if(tileInside) {
-            //Добавляем в список координаты тайлов
-            arrJobTilesList.push({
-              x: parseInt(x),
-              y: parseInt(y),
-              z: parseInt(requiredZoom),
-              response: false,
-              map: map
-            });
-          }
-
-        }
-      }
-      Log.make("info", "MAIN", `Calculation of tiles list is finished. Total ${arrJobTilesList.length} tiles.`);
-      //Return tiles job list
-      return arrJobTilesList;
-    }
-    else {
-      Log.make('warning', "MAIN", "Abort tiles calculation. Geometry type isnt Polygon.");
-      return false;
     }
   }
 }

@@ -1,7 +1,7 @@
 /*
 	Leaflet.contextmenu, a context menu for Leaflet.
 	(c) 2015, Adam Ratcliffe, GeoSmart Maps Limited
-
+	(c) 2021-2022, Oleg Gunyakov, Maptorium Tile Downloader
 	@preserve
 */
 
@@ -31,38 +31,47 @@ L.Map.ContextMenu = L.Handler.extend({
     _touchstart: L.Browser.msPointer ? 'MSPointerDown' : L.Browser.pointer ? 'pointerdown' : 'touchstart',
 
     statics: {
-        BASE_CLS: 'dropdown-menu'
+      CLS_CONTAINER: 'dropdown-menu',
+      CLS_DISABLED: 'disabled',
+      CLS_TOGGLE: 'dropdown-toggle arrow-none',
+      CLS_ELEMENT: 'dropdown',
+      CLS_INNER: 'dropdown-item',
+      CONTAINER: 'ul',
+      ELEMENT: 'li',
+      INNER: 'a',
+      ZINDEX: 10000
     },
 
     initialize: function (map) {
         L.Handler.prototype.initialize.call(this, map);
 
         this._items = [];
-        this._visible = false;
-				this.relatedTarget = false;
 
-        var container = this._container = L.DomUtil.create('div', L.Map.ContextMenu.BASE_CLS, map._container);
-        container.style.zIndex = 10000;
-        container.style.position = 'absolute';
+        this._idCounter = 0;
+        this._visible = false;
+
+        this._container = this._initContainer(map._container);
+
+				this._relatedTarget = false;
 
         if (map.options.contextmenuWidth) {
-            container.style.width = map.options.contextmenuWidth + 'px';
+            this._container.style.width = map.options.contextmenuWidth + 'px';
         }
 
         this._createItems();
 
         L.DomEvent
-            .on(container, 'click', L.DomEvent.stop)
-            .on(container, 'mousedown', L.DomEvent.stop)
-            .on(container, 'dblclick', L.DomEvent.stop)
-            .on(container, 'contextmenu', L.DomEvent.stop);
+            .on(this._container, 'click', L.DomEvent.stop)
+            .on(this._container, 'mousedown', L.DomEvent.stop)
+            .on(this._container, 'dblclick', L.DomEvent.stop)
+            .on(this._container, 'contextmenu', L.DomEvent.stop);
     },
 
     addHooks: function () {
         var container = this._map.getContainer();
 
         L.DomEvent
-          	//.on(container, 'mouseleave', this._hide, this)
+            //.on(container, 'mouseleave', this._hide, this)
             .on(document, 'keydown', this._onKeyDown, this);
 
         if (L.Browser.touch) {
@@ -208,13 +217,21 @@ L.Map.ContextMenu = L.Handler.extend({
         return this._visible;
     },
 
-    _createItems: function () {
-        var itemOptions = this._map.options.contextmenuItems,
-            item,
+    _initContainer: function(_container, subMenu = false) {
+      var container = L.DomUtil.create(L.Map.ContextMenu.CONTAINER, L.Map.ContextMenu.CLS_CONTAINER, _container);
+      container.style.zIndex = L.Map.ContextMenu.ZINDEX;
+      //if(!subMenu) {
+        container.style.position = 'absolute';
+      //}
+      return container;
+    },
+
+    _createItems: function (itemOptions = this._map.options.contextmenuItems, container = this._container) {
+        let item,
             i, l;
 
         for (i = 0, l = itemOptions.length; i < l; i++) {
-            this._items.push(this._createItem(this._container, itemOptions[i]));
+            this._items.push(this._createItem(container, itemOptions[i]));
         }
     },
 
@@ -223,29 +240,65 @@ L.Map.ContextMenu = L.Handler.extend({
             return this._createSeparator(container, index);
         }
 
-        var itemCls = 'dropdown-item',
-            cls = options.disabled ? (itemCls + ' disabled') : itemCls,
-            el = this._insertElementAt('a', cls, container, index),
-            callback = this._createEventHandler(el, options.callback, options.context, options.hideOnSelect),
-            icon = this._getIcon(options),
-            iconCls = this._getIconCls(options),
-            html = '';
-
-        if (icon) {
-            html = '<img class="' + L.Map.ContextMenu.BASE_CLS + '-icon" src="' + icon + '"/>';
-        } else if (iconCls) {
-            html = '<i class="' + iconCls + '"></i>';
+        let subMenu = false;
+        if(options.contextmenuItems) {
+          subMenu = true;
         }
 
-        el.innerHTML = html + "<span>&nbsp;" + options.text + "</span>";
-        el.href = '#';
+        let itemCls = L.Map.ContextMenu.CLS_ELEMENT;
+        let  cls = options.disabled ? (itemCls + ' ' + L.Map.ContextMenu.CLS_DISABLED) : itemCls;
+        cls = options.class ? (itemCls + ' ' + options.class) : itemCls;
+        let el = this._insertElementAt(L.Map.ContextMenu.ELEMENT, cls, container, index);
+        this._idCounter++;
 
-        L.DomEvent
-            .on(el, 'mouseover', this._onItemMouseOver, this)
-            .on(el, 'mouseout', this._onItemMouseOut, this)
-            .on(el, 'mousedown', L.DomEvent.stopPropagation)
+        let callback = false;
+        if(!subMenu) {
+          callback = this._createEventHandler(el, options.callback, options.context, options.hideOnSelect, options.data);
+        }
+        let icon = this._getIcon(options);
+        let iconCls = this._getIconCls(options);
+
+        let inner = L.DomUtil.create(L.Map.ContextMenu.INNER, L.Map.ContextMenu.CLS_INNER, el);
+        inner.href = '#';
+        //inner.setAttribute('id', 'ctxMenu' + this._idCounter);
+        inner.setAttribute("role", "button");
+        inner.setAttribute("data-toggle", "dropdown");
+        inner.setAttribute("aria-haspopup", "true");
+        inner.setAttribute("aria-expanded", "false");
+
+        if(iconCls) {
+          L.DomUtil.create("i", iconCls, inner);
+        }
+
+        if (icon) {
+          let iconContainer = L.DomUtil.create("img", '', inner);
+          iconContainer.src = icon;
+        }
+
+        let textContainer = L.DomUtil.create("span", '', inner);
+        textContainer.innerHTML = "&nbsp;" + options.text;
+
+        if(subMenu) {
+          //L.DomUtil.create("div", "arrow-down", inner);
+          L.DomUtil.addClass(inner, L.Map.ContextMenu.CLS_TOGGLE);
+          if(options.contextmenuItems) {
+            let subContainer = this._initContainer(el, true);
+            //subContainer.setAttribute("aria-labelledby", 'ctxMenu' + this._idCounter);
+            this._createItems(options.contextmenuItems, subContainer);
+          }
+        }
+
+        if(!subMenu) {
+          L.DomEvent
+            //.on(el, 'mouseover', this._onItemMouseOver, this)
+            .on(el, 'mousedown', L.DomEvent.stop)
+            //.on(el, 'mouseout', this._onItemMouseOut, this)
             .on(el, 'click', callback);
-
+        }
+        else {
+            L.DomEvent.on(el, 'click', this._showSubMenu, this);
+            //L.DomEvent.on(el, 'mouseout', this._hideSubMenu, this);
+        }
         if (L.Browser.touch) {
             L.DomEvent.on(el, this._touchstart, L.DomEvent.stopPropagation);
         }
@@ -260,6 +313,32 @@ L.Map.ContextMenu = L.Handler.extend({
             el: el,
             callback: callback
         };
+    },
+
+    _showSubMenu: function(target) {
+      let container = target.target.closest(".dropdown-menu");
+      let allSubMenu = container.querySelectorAll(".show");
+      for(i = 0; i < allSubMenu.length; i++) {
+        L.DomUtil.removeClass(allSubMenu[i], "show");
+      }
+      let subContainer = target.target.closest("li");
+      subContainer = subContainer.querySelector(".dropdown-menu");
+      if(subContainer) {
+        subContainer.style.top = "0px";
+        subContainer.style.left = container.offsetWidth + "px";
+        if(L.DomUtil.hasClass(subContainer, "show")) {
+          //L.DomUtil.removeClass(subContainer, "show");
+        }
+        else {
+          L.DomUtil.addClass(subContainer, "show");
+        }
+      }
+    },
+
+    _hideSubMenu: function(target) {
+      let subContainer = target.target.closest("li");
+      subContainer = subContainer.querySelector(".dropdown-menu");
+      L.DomUtil.removeClass(subContainer, "show");
     },
 
     _removeItem: function (id) {
@@ -278,11 +357,11 @@ L.Map.ContextMenu = L.Handler.extend({
                     L.DomEvent
                         .off(el, 'mouseover', this._onItemMouseOver, this)
                         .off(el, 'mouseover', this._onItemMouseOut, this)
-                        .off(el, 'mousedown', L.DomEvent.stopPropagation)
+                        .off(el, 'mousedown', L.DomEvent.stop)
                         .off(el, 'click', callback);
 
                     if (L.Browser.touch) {
-                        L.DomEvent.off(el, this._touchstart, L.DomEvent.stopPropagation);
+                        L.DomEvent.off(el, this._touchstart, L.DomEvent.stop);
                     }
 
                     if (!L.Browser.pointer) {
@@ -308,10 +387,10 @@ L.Map.ContextMenu = L.Handler.extend({
         };
     },
 
-    _createEventHandler: function (el, func, context, hideOnSelect) {
+    _createEventHandler: function (el, func, context, hideOnSelect, itemData) {
         var me = this,
             map = this._map,
-            disabledCls = 'dropdown-item disabled',
+            disabledCls = 'disabled',
             hideOnSelect = (hideOnSelect !== undefined) ? hideOnSelect : true;
 
         return function (e) {
@@ -323,14 +402,14 @@ L.Map.ContextMenu = L.Handler.extend({
                 containerPoint = me._showLocation.containerPoint,
                 layerPoint = map.containerPointToLayerPoint(containerPoint),
                 latlng = map.layerPointToLatLng(layerPoint),
-                relatedTarget = me._showLocation.relatedTarget,
+                relatedTarget = me._relatedTarget,
                 data = {
                   containerPoint: containerPoint,
                   layerPoint: layerPoint,
                   latlng: latlng,
-                  relatedTarget: relatedTarget
+                  relatedTarget: relatedTarget,
+									data: itemData
                 };
-
             if (hideOnSelect) {
                 me._hide();
             }
@@ -366,26 +445,24 @@ L.Map.ContextMenu = L.Handler.extend({
     },
 
     _show: function (e) {
-			//console.log("_show");
-        this._showAtPoint(e.containerPoint, e);
+      var subContainer = document.querySelectorAll(".show");
+      for (var i = 0; i < subContainer.length; i++) {
+        L.DomUtil.removeClass(subContainer[i], "show");
+      }
+      this._showAtPoint(e.containerPoint, e);
     },
 
     _showAtPoint: function (pt, data) {
-			//console.log(data);
         if (this._items.length) {
-            var map = this._map,
-            event = L.extend(data || {}, {contextmenu: this});
+            let event = L.extend(data || {}, {contextmenu: this});
 
             this._showLocation = {
                 containerPoint: pt
             };
 
             if (data && data.relatedTarget){
-							this.relatedTarget = data.relatedTarget;
+                this._relatedTarget = data.relatedTarget;
             }
-
-						this._showLocation.relatedTarget = this.relatedTarget;
-
             this._setPosition(pt);
 
             if (!this._visible) {
@@ -476,11 +553,11 @@ L.Map.ContextMenu = L.Handler.extend({
     },
 
     _onItemMouseOver: function (e) {
-        L.DomUtil.addClass(e.target || e.srcElement, 'over');
+      //L.DomUtil.addClass(e.target || e.srcElement, 'over');
     },
 
     _onItemMouseOut: function (e) {
-        L.DomUtil.removeClass(e.target || e.srcElement, 'over');
+      //L.DomUtil.removeClass(e.target || e.srcElement, 'over');
     }
 });
 
@@ -489,7 +566,6 @@ L.Mixin.ContextMenu = {
     bindContextMenu: function (options) {
         L.setOptions(this, options);
         this._initContextMenu();
-
         return this;
     },
 
@@ -540,15 +616,22 @@ L.Mixin.ContextMenu = {
             if (!this.options.contextmenuInheritItems) {
                 this._map.contextmenu.hideAllItems();
             }
-
-            for (i = 0, l = this.options.contextmenuItems.length; i < l; i++) {
-                itemOptions = this.options.contextmenuItems[i];
-                this._items.push(this._map.contextmenu.insertItem(itemOptions, itemOptions.index));
-            }
+            this._subMenu(this.options.contextmenuItems);
 
             this._map.once('contextmenu.hide', this._hideContextMenu, this);
+            var subContainer = document.querySelectorAll(".show");
+            for (var i = 0; i < subContainer.length; i++) {
+              L.DomUtil.removeClass(subContainer[i], "show");
+            }
             this._map.contextmenu.showAt(pt, data);
         }
+    },
+
+    _subMenu: function(contextmenuItems) {
+      for (i = 0, l = contextmenuItems.length; i < l; i++) {
+          itemOptions = contextmenuItems[i];
+          this._items.push(this._map.contextmenu.insertItem(itemOptions, itemOptions.index));
+      }
     },
 
     _hideContextMenu: function () {

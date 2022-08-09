@@ -77,6 +77,15 @@ app.get(["/tile", "/layouts/tile", "/old/tile"], async function(request, respons
   q.z = parseInt(q.z);
   q.x = parseInt(q.x);
   q.y = parseInt(q.y);
+  switch(q.mode) {
+    case "force":
+    case "enable":
+    case "disable":
+      break;
+    default:
+      q.mode = config.network.state;
+      break;
+  }
   //Устанавливаем максимальное значение координат тайла
   let maxTileNumber = 1;
   //Изменяем максимальный номер тайла в соответсвии с уровнем увеличения
@@ -84,6 +93,7 @@ app.get(["/tile", "/layouts/tile", "/old/tile"], async function(request, respons
     maxTileNumber = maxTileNumber * 2;
   }
   maxTileNumber--;
+  //console.log(maxTileNumber);
   //Если координата тайла превышает максимально возможное значение
   if(q.x > maxTileNumber || q.y > maxTileNumber) {
     Log.make("error", "MAIN", "Tile request. Tile coords is out of max limit");
@@ -104,7 +114,8 @@ app.get(["/tile", "/layouts/tile", "/old/tile"], async function(request, respons
       x: q.x,
       y: q.y,
       z: q.z,
-      response: response
+      response: response,
+      mode: q.mode
     });
     //Запускаем потоки загрузки
     threadsStarter();
@@ -120,6 +131,7 @@ app.get("/job", async function(request, response){
   let jobConfig = parseReq.query;
   //Push job order to list
   jobConfig.running = false;
+  jobConfig.mode = config.network.state;
   arrJobList.push(jobConfig);
   IO.emit("setJobList", arrJobList);
 });
@@ -235,6 +247,10 @@ async function tilesService(threadNumber) {
       }
       //if get tile info before
       if(jobTile) {
+        //console.log(jobTile);
+        if(!jobTile.mode) {
+          jobTile.mode = config.network.state;
+        }
         //Get response
         let response = jobTile.response;
         //Chech if we already init requred map handler
@@ -242,7 +258,7 @@ async function tilesService(threadNumber) {
           //If have conected map handler just get it
           map = arrMaps[jobTile.map];
           //Handle tile download logick
-          tile = await map.getTile(jobTile.z, jobTile.x, jobTile.y);
+          tile = await map.getTile(jobTile.z, jobTile.x, jobTile.y, jobTile.mode);
           //If tile handled
           if (tile && tile != 404) {
             //If tile was received by http request
@@ -462,54 +478,48 @@ IO.on('connection', async function(socket){
     socket.emit("mode-change", {type: 'info', message: `Network mode changed to '${config.network.state}'`});
   });
   //----------------------------------------------------------------------------
-  //Add polygons/points (geometry) to DB
-  //----------------------------------------------------------------------------
-  socket.on("newGeometry", async (geometry) => {
-    Log.make("info", "MAIN", "Request to save new geometry.");
-    await GEOMETRY.save(geometry);
-  });
-  //----------------------------------------------------------------------------
-  //Update polygons/points (geometry) in DB
-  //----------------------------------------------------------------------------
-  socket.on("updateGeometry", async (geometry) => {
-    console.log(geometry);
-    await GEOMETRY.update(geometry, true);
-  });
-  //----------------------------------------------------------------------------
   //Tile Cached Map
   //----------------------------------------------------------------------------
   socket.on("getTileCachedMap", async (mapInfo) => {
-    let map = "googlesat";
-    let mapObj = arrMaps[map];
-    let requiredZoom = mapInfo.offset;
-    let tempArr = await GEOMETRY.tileList(mapInfo.ID, requiredZoom, map);
-    let time = Date.now();
-    Log.make("info", "MAIN", "Start checking tiles in DB for cached map.");
-    if(Array.isArray(tempArr)) {
-      tileCachedList = {map: map, zoom: requiredZoom, tiles: {}};
-      for(i = 0; i < tempArr.length; i++) {
-        let checkTile = await mapObj.checkTile(tempArr[i]['z'], tempArr[i]['x'], tempArr[i]['y']);
-        let state = "missing";
-        if(checkTile) {
-          if(checkTile.s != 0) {
-            state = "present";
+    if(mapInfo.mapID) {
+      let map = mapInfo.mapID;
+      let mapObj = arrMaps[map];
+      let requiredZoom = mapInfo.offset;
+      let tempArr = await GEOMETRY.tileList(mapInfo.ID, requiredZoom, map);
+      let time = Date.now();
+      Log.make("info", "MAIN", "Start checking tiles in DB for cached map.");
+      if(tempArr) {
+        tileCachedList = {map: map, zoom: requiredZoom, tiles: {}};
+        for(i = 0; i < tempArr.length; i++) {
+          let checkTile = await mapObj.checkTile(tempArr[i]['z'], tempArr[i]['x'], tempArr[i]['y']);
+          let state = "missing";
+          if(checkTile) {
+            if(checkTile.s != 0) {
+              state = "present";
+            }
+            else {
+              state = "empty";
+            }
           }
-          else {
-            state = "empty";
+          if(typeof tileCachedList.tiles[tempArr[i]['x']] == "undefined") {
+            tileCachedList.tiles[tempArr[i]['x']] = {};
           }
+          tileCachedList.tiles[tempArr[i]['x']][tempArr[i]['y']] = state;
         }
-        if(typeof tileCachedList.tiles[tempArr[i]['x']] == "undefined") {
-          tileCachedList.tiles[tempArr[i]['x']] = {};
-        }
-        tileCachedList.tiles[tempArr[i]['x']][tempArr[i]['y']] = state;
+        time = Math.round((Date.now() - time) / 1000);
+        Log.make("info", "MAIN", `Finished checking tiles in DB for cached map. Time spend ${time}.`);
+        time = Date.now();
+        //tileCachedMap = await CachedMap.generateMap(cachedMap);
+        time = Math.round((Date.now() - time) / 1000);
+        Log.make("info", "MAIN", `Finished generating tiles for cached map. Time spend ${time}.`);
+        socket.emit("setTileCachedMap", tileCachedList);
       }
-      time = Math.round((Date.now() - time) / 1000);
-      Log.make("info", "MAIN", `Finished checking tiles in DB for cached map. Time spend ${time}.`);
-      time = Date.now();
-      //tileCachedMap = await CachedMap.generateMap(cachedMap);
-      time = Math.round((Date.now() - time) / 1000);
-      Log.make("info", "MAIN", `Finished generating tiles for cached map. Time spend ${time}.`);
-      socket.emit("setTileCachedMap", tileCachedList);
+      else {
+        socket.emit("message", {result: false, message: "Error to get tile cached map info."});
+      }
+    }
+    else {
+      socket.emit("message", {result: false, message: "Incorect data to get cached map."});
     }
   });
   //----------------------------------------------------------------------------

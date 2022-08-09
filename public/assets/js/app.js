@@ -1,4 +1,8 @@
 //------------------------------------------------------------------------------
+//Socket IO
+//------------------------------------------------------------------------------
+let socket = io();
+//------------------------------------------------------------------------------
 //Additional functions
 //------------------------------------------------------------------------------
 function formatFileSize(bytes,decimalPoint) {
@@ -454,6 +458,13 @@ $(document).ready(() => {
           });
         });
       }
+      //------------------------------------------------------------------------------
+      //Show config window for job order
+      //------------------------------------------------------------------------------
+      window.showJobModal = function(e) {
+        $("#polygonID").val(e.relatedTarget.maptoriumID);
+        $("#jobModal").modal('show');
+      }
       //----------------------------------------------------------------------------
       //Context menu: GEOMETRY PROPERTIES
       //----------------------------------------------------------------------------
@@ -462,43 +473,25 @@ $(document).ready(() => {
         let markID = e.relatedTarget.maptoriumID;
         getMarkInfo(markID);
       }
-      //------------------------------------------------------------------------------
-      //Context menu: DELETE GEOMETRY
-      //------------------------------------------------------------------------------
-      window.deleteGeometry = function(e) {
-        //Send to server ID of geometry
-        $.ajax({
-          url: "/marks/delete",
-          data: `markID=${e.relatedTarget.maptoriumID}`,
-          method: "post",
-          success: (response, code) => {
-            if(response.result) {
-              //Remove geometry from map
-              e.relatedTarget.remove();
-              alertify.success(response.message);
-            }
-            else {
-              alertify.error(response.message);
-            }
-          }
-        });
-      }
 
       $("#marksPropertiesSave").on("click", (event) => {
-        let data = $("#markPropertiesForm").serialize();
+        //let data = $("#markPropertiesForm").serialize();
+        let data = $('#markPropertiesForm').serializeArray().reduce(function(a, x) { a[x.name] = x.value; return a; }, {});
+        //console.log(data);
         let fillColor = fillColorPickr.getColor();
         let opacity = Math.round(fillColor.a * 100) / 100;
-        data += `&fillOpacity=` + opacity;
+        data.fillOpacity = opacity;
         fillColor = fillColor.toHEXA();
         fillColor = "#" + fillColor[0] + fillColor[1] + fillColor[2];
-        data += `&fillColor=` + fillColor;
+        data.fillColor = fillColor;
         let color = ColorPickr.getColor();
         color = color.toHEXA();
         color = "#" + color[0] + color[1] + color[2];
-        data += `&color=` + color;
+        data.color = color;
+        data.update = true;
         $.ajax({
           url: "/marks/update",
-          data: data,
+          data: {data: JSON.stringify(data)},
           dataType: "json",
           method: "post",
           success: (response, code) => {

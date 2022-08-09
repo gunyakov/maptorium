@@ -23,10 +23,10 @@ class Map {
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
-  async getTile(z, x, y) {
+  async getTile(z, x, y, mode = "enable") {
     let tileUrl = await this.getURL(z, x, y);
     Log.make("info", "HTTP", tileUrl);
-    let tile = await this.getTileMain(z, x, y, tileUrl);
+    let tile = await this.getTileMain(z, x, y, tileUrl, mode);
     if(tile) {
       return tile;
     }
@@ -37,11 +37,11 @@ class Map {
   //----------------------------------------------------------------------------
   //Main tile handler
   //----------------------------------------------------------------------------
-  async getTileMain(z, x, y, url) {
+  async getTileMain(z, x, y, url, mode) {
     //Reset tile info
     let tile = "";
     //Switch of network state
-    switch (this.config.network.state) {
+    switch (mode) {
       //------------------------------------------------------------------------
       //Internet & Cache mode
       //------------------------------------------------------------------------
@@ -58,7 +58,7 @@ class Map {
           //Wait delay in config to prevent server request overloading
           await wait(this.config.request.delay);
           //Try to get tile from server
-          tile = await this._httpEngine.get(url, this.config, "arraybuffer").catch((error) => { Log.make("error", "MAP", error) });
+          tile = await this._httpEngine.get(url, this.config, "arraybuffer");
           //If received tile from server or 404 code
           if(tile && tile != 404) {
             //Insert tile into DB

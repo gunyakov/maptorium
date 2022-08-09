@@ -36,5 +36,45 @@ router.post('/position', async (req, res) => {
   }
 });
 
+router.post("/cached", async(req, res) => {
+  let data = JSON.parse(req.body.data);
+  console.log(data);
+  let map = data.mapID;
+  let mapObj = arrMaps[map];
+  let requiredZoom = mapInfo.offset;
+  let tempArr = await GEOMETRY.tileList(mapInfo.ID, requiredZoom, map);
+  let time = Date.now();
+  Log.make("info", "MAIN", "Start checking tiles in DB for cached map.");
+  if(tempArr) {
+    tileCachedList = {map: map, zoom: requiredZoom, tiles: {}};
+    for(i = 0; i < tempArr.length; i++) {
+      let checkTile = await mapObj.checkTile(tempArr[i]['z'], tempArr[i]['x'], tempArr[i]['y']);
+      let state = "missing";
+      if(checkTile) {
+        if(checkTile.s != 0) {
+          state = "present";
+        }
+        else {
+          state = "empty";
+        }
+      }
+      if(typeof tileCachedList.tiles[tempArr[i]['x']] == "undefined") {
+        tileCachedList.tiles[tempArr[i]['x']] = {};
+      }
+      tileCachedList.tiles[tempArr[i]['x']][tempArr[i]['y']] = state;
+    }
+    time = Math.round((Date.now() - time) / 1000);
+    Log.make("info", "MAIN", `Finished checking tiles in DB for cached map. Time spend ${time}.`);
+    time = Date.now();
+    //tileCachedMap = await CachedMap.generateMap(cachedMap);
+    time = Math.round((Date.now() - time) / 1000);
+    Log.make("info", "MAIN", `Finished generating tiles for cached map. Time spend ${time}.`);
+    socket.emit("setTileCachedMap", tileCachedList);
+  }
+  else {
+    socket.emit("message", {result: false, message: "Error to get tile cached map info."});
+  }
+});
+
 
 module.exports = router;

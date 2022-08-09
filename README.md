@@ -57,7 +57,9 @@ Next futures to add:
 
 ### Version
 
-Very early version 0.8.0. Under heavy development
+Very early version 0.8.2. Under heavy development
+
+09.08.2022 - Version 0.8.2. Geometry editation (change from Geoman to Leaflet.editable plugin). Storage all geometry and options for geometry in DB.
 
 16.07.2022 - Version 0.8.0. UI update.
 

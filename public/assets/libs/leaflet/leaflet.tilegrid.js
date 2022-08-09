@@ -187,35 +187,8 @@ L.TileGrid = L.Class.extend({
   		point = L.point(x1, y1 + 256);
   		point = this._map.unproject(point, this._map.getZoom());
   		latlngs.push([point.lat, point.lng]);
-  		let polygon = L.polygon(latlngs, {
-        color: this.options.color,
-        fillColor: this.options.fillColor,
-        fillOpacity: this.options.fillOpacity,
-        contextmenu: true,
-        contextmenuWidth: 140,
-        contextmenuInheritItems: false,
-        contextmenuItems: [{
-          text: 'Properties',
-          callback: window.propertiesGeometry
-        },
-        {
-          text: 'Edit',
-          callback: window.editGeometry
-        },
-        {
-          text: 'Start download job',
-          callback: window.showJobModal
-        },
-        {
-          text: 'Show tile cached map',
-          callback: window.showTileCachedMap
-        },
-        '-',
-        {
-          text: 'Delete',
-          callback: window.deleteGeometry
-        }]
-  		}).addTo(this._map);
+  		let polygon = L.polygon(latlngs, this.options).addTo(this._map);
+      polygon.bindContextMenu(this.options);
   		this._selectMode = false;
       //console.log(polygon);
       let geometry = {
@@ -231,7 +204,7 @@ L.TileGrid = L.Class.extend({
       geometry.bounds._southWest = this._map.project(geometry.bounds._southWest);
       geometry.bounds._northEast = this._map.project(geometry.bounds._northEast);
       if(this._callback) {
-        this._callback(geometry);
+        this._callback(geometry, polygon);
       }
   	}
   }

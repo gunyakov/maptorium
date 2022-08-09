@@ -28,14 +28,6 @@ L.CachedMap = L.GridLayer.extend({
     tile.width = size.x;
     tile.height = size.y;
     if(this._cachedMap) {
-      //Save current tile in tile list for future update if we draw something on it
-      if(typeof this._tilesList[coords.x] == "undefined") {
-        this._tilesList[coords.x] = {};
-        if(typeof this._tilesList[coords.x][coords.y] == "undefined") {
-          this._tilesList[coords.x][coords.y] = tile;
-          console.log("Insert tile to tiles list.");
-        }
-      }
       //Calculate scale factor to draw tile
       let scaleFactor = Math.pow(2, Math.abs(this._cachedMap.zoom - coords.z));
       let sizeDraw = 256 / scaleFactor;
@@ -44,32 +36,34 @@ L.CachedMap = L.GridLayer.extend({
       let stopX = startX + scaleFactor - 1;
       let startY = coords.y * scaleFactor;
       let stopY = startY + scaleFactor - 1;
+      //console.log(coords.x, coords.y, coords.z);
+      //console.log(startX, stopX, startY, stopY, scaleFactor, this._cachedMap.zoom, coords.z);
       var ctx = tile.getContext('2d');
       for(let x = startX; x <= stopX; x++) {
         for(let y = startY; y <= stopY; y++) {
           if(typeof this._cachedMap.tiles[x] !== "undefined") {
             if(typeof this._cachedMap.tiles[x][y] !== "undefined") {
-
+              //console.log("draw tile");
               let drawX = (x - startX) * sizeDraw + sizeMargin;
               let drawY = (y - startY) * sizeDraw + sizeMargin;
-
+              //console.log(drawX, drawY, sizeDraw);
               ctx.fillStyle = this._colors[this._cachedMap.tiles[x][y]];
               ctx.fillRect(drawX, drawY, sizeDraw - 2 * sizeMargin, sizeDraw - 2 * sizeMargin);
             }
           }
         }
       }
+      //Save current tile in tile list for future update if we draw something on it
+      if(typeof this._tilesList[coords.x] == "undefined") {
+        this._tilesList[coords.x] = {};
+      }
+      this._tilesList[coords.x][coords.y] = tile;
     }
     // return the tile so it can be rendered on screen
     return tile;
   },
-  /*onAdd: function (map) {
-		this._map = map;
-    this._curZoom = map.getZoom();
-    map.on('zoomend', this._updateZoom, this);
-	},*/
   setData: function(cachedMap) {
-    console.log("set cached map");
+    console.log("set cached map", cachedMap);
     this._cachedMap = cachedMap;
     this.redraw();
   },
@@ -81,11 +75,11 @@ L.CachedMap = L.GridLayer.extend({
       let scaleFactor = Math.pow(2, Math.abs(this._cachedMap.zoom - this._curZoom));
       let x = Math.floor(tileInfo.x / scaleFactor);
       let y = Math.floor(tileInfo.y / scaleFactor);
-      console.log(x, y);
+      //console.log(x, y);
       //Check if we have current zoom tile in list
       if(typeof this._tilesList[x] != "undefined") {
         if(typeof this._tilesList[x][y] != "undefined") {
-          console.log("Tile for draw is find");
+          //console.log("Tile for draw is find");
           //Get canvas Content
           var ctx = this._tilesList[x][y].getContext('2d');
 

@@ -46,14 +46,21 @@ router.get('/info/:markID', async (req, res) => {
 //MARKS: Update info about mark
 //------------------------------------------------------------------------------
 router.post('/update', async (req, res) => {
-  let result = await GEOMETRY.update(req.body);
+  let data = JSON.parse(req.body.data);
+  //console.log(data);
+  let result = false;
+  if(data.update) {
+    result = await GEOMETRY.update(data);
+  }
+  else {
+    result = await GEOMETRY.update(data, true);
+  }
   if (result) {
     res.json({result: true, message: "Mark was updated."});
   }
   else {
     res.json({result: false, message: "Fail to update mark. Check error log to find error."});
   }
-
 });
 //------------------------------------------------------------------------------
 //MARKS: Get marks list of specific category
@@ -86,4 +93,23 @@ router.post('/delete', async (req, res) => {
   await GEOMETRY.delete(req.body.markID);
   res.json({result: true, message: "Mark was deleted from map."});
 });
+//------------------------------------------------------------------------------
+//MARKS: Add to DB
+//------------------------------------------------------------------------------
+router.post("/add", async (req, res) => {
+  if(req.body.data) {
+    let data = JSON.parse(req.body.data);
+    let result = await GEOMETRY.save(data);
+    if(result) {
+      res.json({result: true, markID: result});
+    }
+    else {
+      res.json({result: false, message: "Error to add mark to DB."});
+    }
+  }
+  else {
+    res.json({result: false, message: "Empty data sended to server."});
+  }
+});
+
 module.exports = router;

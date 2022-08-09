@@ -8,10 +8,6 @@ let currentMap = false;
 let currentLayer = false;
 let cachedMap = false;
 //------------------------------------------------------------------------------
-//Socket IO
-//------------------------------------------------------------------------------
-let socket = io();
-//------------------------------------------------------------------------------
 //Change main map
 //------------------------------------------------------------------------------
 function changeMap(mapID) {
@@ -39,6 +35,113 @@ let addLayer = function (mapID) {
 //Section to be executed after document ready
 //------------------------------------------------------------------------------
 $(document).ready(() => {
+  //----------------------------------------------------------------------------
+  //TILE CACHE MAP: Get data from server and show
+  //----------------------------------------------------------------------------
+  window.showTileCachedMap = function(e) {
+    let ID = e.relatedTarget.maptoriumID;
+    if(e.data) {
+      socket.emit("getTileCachedMap", {ID: ID, offset: e.data, mapID: currentMap.options.mapID});
+    }
+    else {
+      alertify.prompt("Enter zoom offset for cached map", "5", function(e, t) {
+        socket.emit("getTileCachedMap", {ID: ID, offset: map.getZoom() + parseInt(t), mapID: currentMap.options.mapID});
+      }).set({title: "Zoom offset"});
+    }
+  }
+  //----------------------------------------------------------------------------
+  //MARKS: Delete from DB
+  //----------------------------------------------------------------------------
+  window.deleteMark = function(e) {
+    //Send to server ID of geometry
+    $.ajax({
+      url: "/marks/delete",
+      data: `markID=${e.relatedTarget.maptoriumID}`,
+      method: "post",
+      success: (response, code) => {
+        if(response.result) {
+          //Remove geometry from map
+          e.relatedTarget.remove();
+          alertify.success(response.message);
+        }
+        else {
+          alertify.error(response.message);
+        }
+      }
+    });
+  }
+  //------------------------------------------------------------------------------
+  //MARKS: Edit polygon
+  //------------------------------------------------------------------------------
+  window.editPolygon = function (e) {
+    if(lastGeometry) {
+      lastGeometry.disableEdit();
+    }
+    lastGeometry = e.relatedTarget;
+    e.relatedTarget.enableEdit();
+    $("#intrumentalPanel").show();
+  }
+  //----------------------------------------------------------------------------
+  //Global polygon options
+  //----------------------------------------------------------------------------
+  globalPolygonOptions = {
+    contextmenu: true,
+    //contextmenuWidth: 140,
+    contextmenuInheritItems: true,
+    contextmenuItems: [
+    '-',
+    {
+      text: 'Properties',
+      callback: window.propertiesGeometry,
+      iconCls: "mdi mdi-application-cog"
+    },
+    {
+      text: 'Edit',
+      callback: window.editPolygon,
+      iconCls: "mdi mdi-circle-edit-outline"
+    },
+    {
+      text: 'Start download job',
+      callback: window.showJobModal,
+      iconCls: "mdi mdi-auto-download"
+    },
+    {
+      text: 'Show tile cached map for main map',
+      iconCls: "mdi mdi-data-matrix-plus",
+      contextmenuItems: [{
+        text: "Z6",
+        callback: window.showTileCachedMap,
+        data: 6
+      },
+      {
+        text: "Z10",
+        callback: window.showTileCachedMap,
+        data: 10
+      },
+      {
+        text: "Z11",
+        callback: window.showTileCachedMap,
+        data: 11
+      },
+      {
+        text: "Z12",
+        callback: window.showTileCachedMap,
+        data: 12
+      },
+      {
+        text: "Z13",
+        callback: window.showTileCachedMap,
+        data: 13
+      }]
+    },
+    '-',
+    {
+      text: 'Delete',
+      callback: window.deleteMark,
+      iconCls: "mdi mdi-delete-outline"
+    }]
+  }
+
   //------------------------------------------------------------------------------
   //MAP: Resize after loading
   //------------------------------------------------------------------------------
@@ -71,19 +174,55 @@ $(document).ready(() => {
        text: 'Force download overlay tile to cache',
        callback: downloadTileOverlay,
        iconCls: "mdi mdi-download-multiple"
+     },
+     {
+       text: 'Force download visible map tile to cache',
+       callback: downloadTileMapForce,
+       iconCls: "mdi mdi-download-multiple"
+     },
+     {
+       text: 'Force download visible overlay tile to cache',
+       callback: downloadTileOverlayForce,
+       iconCls: "mdi mdi-download-multiple"
      }]
   }).setView([39, 0], 5);
   //----------------------------------------------------------------------------
   //CONTEXT MENU: Download tile for map
   //----------------------------------------------------------------------------
   function downloadTileMap (e) {
-    console.log(e);
+    let coords = map.project(e.latlng, map.getZoom());
+    let tileX = Math.floor(coords.x / 256);
+    let tileY = Math.floor(coords.y / 256);
+    currentMap._tiles[`${tileX}:${tileY}:${map.getZoom()}`].el.src += `&mode=force&rnd=${Math.random()}`;
+  }
+  //----------------------------------------------------------------------------
+  //CONTEXT MENU: Download tile for map
+  //----------------------------------------------------------------------------
+  function downloadTileMapForce (e) {
+    currentMap.setUrl(`tile?map=${currentMap.options.mapID}&z={z}&x={x}&y={y}&mode=force&rnd=${Math.random()}`);
+    currentMap.once("load", (e) => {
+      currentMap.setUrl(`tile?map=${currentMap.options.mapID}&z={z}&x={x}&y={y}`);
+    });
+    currentMap.redraw();
   }
   //----------------------------------------------------------------------------
   //CONTEXT MENU: Download tile for overlay
   //----------------------------------------------------------------------------
   function downloadTileOverlay (e) {
-    console.log(e);
+    let coords = map.project(e.latlng, map.getZoom());
+    let tileX = Math.floor(coords.x / 256);
+    let tileY = Math.floor(coords.y / 256);
+    currentLayer._tiles[`${tileX}:${tileY}:${map.getZoom()}`].el.src += `&mode=force&rnd=${Math.random()}`;
+  }
+  //----------------------------------------------------------------------------
+  //CONTEXT MENU: Download tile for overlay
+  //----------------------------------------------------------------------------
+  function downloadTileOverlayForce (e) {
+    currentLayer.setUrl(`tile?map=${currentLayer.options.mapID}&z={z}&x={x}&y={y}&mode=force&rnd=${Math.random()}`);
+    currentLayer.once("load", (e) => {
+      currentLayer.setUrl(`tile?map=${currentLayer.options.mapID}&z={z}&x={x}&y={y}`);
+    });
+    currentLayer.redraw();
   }
   //----------------------------------------------------------------------------
   //CONTEXT MENU: Add placemark on map
@@ -135,8 +274,24 @@ $(document).ready(() => {
         socket.emit("mode-change", $(this).attr("mode-val"));
         break;
       case "t-select-tile":
-        TileGrid.select(function(geometry) {
-          socket.emit("newGeometry", geometry);
+        TileGrid.select(function(geometry, polygonRef) {
+          $.ajax({
+            url: "/marks/add",
+            dataType: "json",
+            data: {data: JSON.stringify(geometry)},
+            method: "post",
+            success: (response, code) => {
+              if(response.result) {
+                polygonRef.maptoriumID = response.markID;
+                polygonRef.shape = "Polygon";
+                polygonRef.bindTooltip('Geometry ' + response.markID);
+              }
+              else {
+                alertify.error(response.message);
+              }
+            }
+          });
+          //socket.emit("newGeometry", geometry);
         });
         break;
       //------------------------------------------------------------------------
@@ -190,7 +345,6 @@ $(document).ready(() => {
         break;
       case "gps-show-history":
         let routeID = $(this).attr("data-id");
-        console.log(routeID)
         if(routeID > 0) {
           socket.emit("gps-history", routeID);
         }
@@ -211,7 +365,6 @@ $(document).ready(() => {
       switch($(this).attr("data-key")) {
         case "gps-show-history":
           let routeID = $(this).attr("data-id");
-          console.log(routeID)
           if(routeID > 0) {
             socket.emit("gps-history", routeID);
           }
@@ -234,7 +387,7 @@ $(document).ready(() => {
         alertify.message(data.message);
     }
   });
-  socket.on("mode-change", (data) => {
+  socket.on(["mode-change", "message"], (data) => {
     alertify.message(data.message);
   });
   socket.on("gps-server-service", (data) => {
@@ -307,6 +460,7 @@ $(document).ready(() => {
   //Tile grid add to map
   //------------------------------------------------------------------------------
   var TileGrid = L.tilegrid({
+    ...globalPolygonOptions,
     zoomOffset: -1,
     zoom: -1
   });
@@ -319,7 +473,6 @@ $(document).ready(() => {
   //Response maps list from server
   //------------------------------------------------------------------------------
   socket.on("setMapList", (data) => {
-    //console.log(data);
     $("#jobMap").html('');
 
     arrMenuMap = [];
@@ -331,7 +484,9 @@ $(document).ready(() => {
   			maxZoom: 20,
   			attribution: mapInfo.attribution,
   			tileSize: mapInfo.tileSize,
-  			zoomOffset: 0
+  			zoomOffset: 0,
+        type: mapInfo.type,
+        mapID: mapInfo.id,
   		});
 
   		$("#jobMap").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`)
@@ -431,12 +586,12 @@ $(document).ready(() => {
             contextmenuInheritItems: false,
             contextmenuItems: [{
               text: 'Edit',
-              callback: editGeometry//workingLayer.pm.enable()
+              callback: editPolygon//workingLayer.pm.enable()
             },
             '-',
             {
               text: 'Delete',
-              callback: deleteGeometry//workingLayer.remove()
+              callback: window.deleteMark//workingLayer.remove()
             }]
           }).addTo(map);
           break;
@@ -445,40 +600,9 @@ $(document).ready(() => {
             color: geometry[i]['color'],
             fillColor: geometry[i]['fillColor'],
             fillOpacity: geometry[i]['fillOpacity'],
-            weight: geometry[i]['width'],
-            contextmenu: true,
-            //contextmenuWidth: 140,
-            contextmenuInheritItems: true,
-            contextmenuItems: [
-            '-',
-            {
-              text: 'Properties',
-              callback: window.propertiesGeometry,
-              iconCls: "mdi mdi-application-cog",
-              disabled: true
-            },
-            {
-              text: 'Edit',
-              callback: editGeometry,
-              iconCls: "mdi mdi-circle-edit-outline"
-            },
-            {
-              text: 'Start download job',
-              callback: showJobModal,
-              iconCls: "mdi mdi-auto-download"
-            },
-            {
-              text: 'Show tile cached map',
-              callback: showTileCachedMap,
-              iconCls: "mdi mdi-data-matrix-plus"
-            },
-            '-',
-            {
-              text: 'Delete',
-              callback: deleteGeometry,
-              iconCls: "mdi mdi-delete-outline"
-            }]
+            weight: geometry[i]['width']
           }).addTo(map);
+          workingGeometry.bindContextMenu(globalPolygonOptions);
           break;
         case "Marker":
           workingGeometry = L.marker(latlngs[0], {
@@ -487,12 +611,12 @@ $(document).ready(() => {
             contextmenuInheritItems: false,
             contextmenuItems: [{
               text: 'Move',
-              callback: editGeometry//workingLayer.pm.enable()
+              callback: editPolygon//workingLayer.pm.enable()
             },
             '-',
             {
               text: 'Delete',
-              callback: deleteGeometry//workingLayer.remove()
+              callback: window.deleteMark//workingLayer.remove()
             }]
           }).addTo(map);
           break;
@@ -514,58 +638,42 @@ $(document).ready(() => {
   //------------------------------------------------------------------------------
   let CachedMap = L.cachedmap();
   CachedMap.addTo(map);
-  window.showTileCachedMap = function(e) {
-    let ID = e.relatedTarget.maptoriumID;
-    alertify.prompt("Enter zoom offset for cached map", "5", function(e, t) {
-      socket.emit("getTileCachedMap", {ID: ID, offset: map.getZoom() + parseInt(t)});
-    }).set({title: "Zoom offset"});
 
-  }
   socket.on("setTileCachedMap", async (cachedMap) => {
     //cachedMap.setUrl(`cachedMap?z={z}&x={x}&y={y}&r=${Date.now()}`);
     CachedMap.setData(cachedMap);
-    //CachedMap.bringToFront();
+    CachedMap.bringToFront();
   });
   socket.on("updateTileCachedMap", async (tileInfo) => {
     CachedMap.updateTile(tileInfo);
   });
 
-  //------------------------------------------------------------------------------
-  //Context menu: EDIT GEOMETRY
-  //------------------------------------------------------------------------------
-  window.editGeometry = function (e) {
-    if(lastGeometry) {
-      lastGeometry.disableEdit();
-    }
-    console.log(e.relatedTarget.maptoriumID);
-    e.relatedTarget.enableEdit();
-    $("#intrumentalPanel").show();
-    lastGeometry = e.relatedTarget;
-  }
 
-  function coordProject(coords) {
+
+  function coordProject (coords) {
     let projCoords = [];
     for(i = 0; i < coords.length; i++) {
       if(Array.isArray(coords[i])) {
-        coordProject = []
+        coordProjectArr = []
         for(a = 0; a < coords[i].length; a++) {
-          coordProject.push(map.project(coords[i][a]));
+          coordProjectArr.push(map.project(coords[i][a]));
         }
-        projCoords.push(coordProject);
+        projCoords.push(coordProjectArr);
       }
       else {
         projCoords.push(map.project(coords[i]));
       }
     }
     return projCoords;
-}
+  }
   //----------------------------------------------------------------------------
   //INSTRUMENTAL PANEL: Save button click
   //----------------------------------------------------------------------------
   $("#panelSaveBtn").on("click", (e) => {
-    lastGeometry.disableEdit();
     $("#intrumentalPanel").hide();
     if(lastGeometry) {
+      lastGeometry.disableEdit();
+      lastGeometry.setLatLngs(lastGeometry.getLatLngs()).redraw();
       //Init geometry OBJ
       let geometry = {
         markID: lastGeometry.maptoriumID,
@@ -578,39 +686,34 @@ $(document).ready(() => {
         case "Line":
           geometry.coords = coordProject(lastGeometry.getLatLngs());
           geometry.bounds = lastGeometry.getBounds();
-          geometry.bounds._southWest = map.project(geometry.bounds._southWest);
-          geometry.bounds._northEast = map.project(geometry.bounds._northEast);
+          if(geometry.bounds._southWest.lng) {
+            geometry.bounds._southWest = map.project(geometry.bounds._southWest);
+            geometry.bounds._northEast = map.project(geometry.bounds._northEast);
+          }
           break;
         case "Marker":
           geometry.coords = map.project(lastGeometry.getLatLng());
           break;
       }
       geometry.zoom = map.getZoom();
+
       //Send data to server
-      //$.ajax({
-        //method: "post",
-        //url: "/marks/update",
-        //dataType: "json",
-        //data: JSON.stringify(geometry),
-        //success: (response, code) => {
-          //if(response.result) {
-            //alertify.success(response.message);
-          //}
-          //else {
-            //alertify.error(response.message);
-          //}
-        //}
-      //});
-      socket.emit("updateGeometry", geometry);
+      $.ajax({
+        method: "post",
+        url: "/marks/update",
+        dataType: "json",
+        data: {data: JSON.stringify(geometry)},
+        success: (response, code) => {
+          if(response.result) {
+            alertify.success(response.message);
+          }
+          else {
+            alertify.error(response.message);
+          }
+        }
+      });
     }
   });
-  //------------------------------------------------------------------------------
-  //Show confog window for job order
-  //------------------------------------------------------------------------------
-  window.showJobModal = function(e) {
-    console.log(e);
-    $("#polygonID").val(e.relatedTarget.maptoriumID);
-    $("#jobModal").modal('show');
-  }
+
 
 });
