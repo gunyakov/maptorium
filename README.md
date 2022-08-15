@@ -57,7 +57,9 @@ Next futures to add:
 
 ### Version
 
-Very early version 0.8.2. Under heavy development
+Very early version 0.8.8. Under heavy development
+
+16.08.2022 - Version 0.8.8. Middle update of job manager.
 
 09.08.2022 - Version 0.8.2. Geometry editation (change from Geoman to Leaflet.editable plugin). Storage all geometry and options for geometry in DB.
 
