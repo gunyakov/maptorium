@@ -132,6 +132,7 @@ L.TileGrid = L.Class.extend({
     }
     gridGroupe.addTo(this._map);
     this._gridGroupe = gridGroupe;
+    gridGroupe.setZIndex(3);
   },
   _update: function() {
     if(this._gridGroupe) {

@@ -114,6 +114,21 @@ $(document).ready(() => {
         data: 6
       },
       {
+        text: "Z7",
+        callback: window.showTileCachedMap,
+        data: 7
+      },
+      {
+        text: "Z8",
+        callback: window.showTileCachedMap,
+        data: 8
+      },
+      {
+        text: "Z9",
+        callback: window.showTileCachedMap,
+        data: 9
+      },
+      {
         text: "Z10",
         callback: window.showTileCachedMap,
         data: 10
@@ -132,6 +147,31 @@ $(document).ready(() => {
         text: "Z13",
         callback: window.showTileCachedMap,
         data: 13
+      },
+      {
+        text: "Z14",
+        callback: window.showTileCachedMap,
+        data: 14
+      },
+      {
+        text: "Z15",
+        callback: window.showTileCachedMap,
+        data: 15
+      },
+      {
+        text: "Z16",
+        callback: window.showTileCachedMap,
+        data: 16
+      },
+      {
+        text: "Z17",
+      callback: window.showTileCachedMap,
+        data: 17
+      },
+      {
+        text: "Z18",
+        callback: window.showTileCachedMap,
+        data: 18
       }]
     },
     '-',
@@ -158,6 +198,8 @@ $(document).ready(() => {
   map = L.map('leaflet-map', {
      editable: true,
      contextmenu: true,
+     worldCopyJump: true,
+     maxBoundsViscosity: 1,
      //contextmenuWidth: 300,
      contextmenuItems: [{
        text: 'Add placemark',
@@ -698,18 +740,12 @@ $(document).ready(() => {
       geometry.zoom = map.getZoom();
 
       //Send data to server
-      $.ajax({
-        method: "post",
-        url: "/marks/update",
-        dataType: "json",
-        data: {data: JSON.stringify(geometry)},
-        success: (response, code) => {
-          if(response.result) {
-            alertify.success(response.message);
-          }
-          else {
-            alertify.error(response.message);
-          }
+      $.jsonPost("/marks/update", geometry, (response, code) => {
+        if(response.result) {
+          alertify.success(response.message);
+        }
+        else {
+          alertify.error(response.message);
         }
       });
     }

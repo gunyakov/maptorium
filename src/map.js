@@ -1,4 +1,12 @@
 //------------------------------------------------------------------------------
+//CRC32 to store tiles hash in DB
+//------------------------------------------------------------------------------
+const CRC32 = require("crc-32");
+//------------------------------------------------------------------------------
+//Moment library to parse date from UI
+//------------------------------------------------------------------------------
+var moment = require('moment');
+//------------------------------------------------------------------------------
 //DB handler
 //------------------------------------------------------------------------------
 const DB = require("./db.js");
@@ -23,10 +31,10 @@ class Map {
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
-  async getTile(z, x, y, mode = "enable") {
+  async getTile(z, x, y, mode = "enable", config = {updateTiles: false, updateDifferent: false, updateDateTiles: false, emptyTiles: true, checkEmptyTiles: false, updateDateEmpty: false}) {
     let tileUrl = await this.getURL(z, x, y);
     Log.make("info", "HTTP", tileUrl);
-    let tile = await this.getTileMain(z, x, y, tileUrl, mode);
+    let tile = await this.getTileMain(z, x, y, tileUrl, mode, config);
     if(tile) {
       return tile;
     }
@@ -37,7 +45,139 @@ class Map {
   //----------------------------------------------------------------------------
   //Main tile handler
   //----------------------------------------------------------------------------
-  async getTileMain(z, x, y, url, mode) {
+  async getTileMain (z, x, y, url, mode, config) {
+
+    //Init default vars
+    let tile = "";
+    let downloadTile = false;
+    let updateTile = false;
+    let netTile = false;
+
+    //Chech if tile exist in DB
+    tile = await this.checkTile(z, x, y, this.starage);
+
+    //If tile empty and need check empty tiles
+    if(tile.s == 0 && config.checkEmptyTiles && !config.updateDateEmpty) {
+      //console.log("update tile 1");
+      updateTile = true;
+    }
+    //If tile empty and set date of empty tiles to check
+    else if (tile.s == 0 && config.checkEmptyTiles && config.updateDateEmpty) {
+      //Parse date to unix time
+      let tileEmptyDate = moment(config.dateEmpty).unix();
+      //If tile was downloaded before date
+      if(tile.d < tileEmptyDate) {
+        //console.log("update tile 2");
+        updateTile = true;
+      }
+    }
+
+    //If empty tile and no need update this tile
+    if(tile.s == 0 && !updateTile) return tile;
+
+    //If tile missing or tile not empty
+    if(!tile || tile.s > 0) {
+      //If tile missing and network state get permition to download tile
+      if(!tile && mode != "disable") {
+        //console.log("download tile 1");
+        downloadTile = true;
+      }
+
+      //If tile exist but network mode set to force mode
+      if(tile && mode == "force") {
+        //console.log("update tile 3");
+        updateTile = true;
+      }
+
+      if(config.updateTiles && config.updateDateTiles) {
+        let tileDate = moment(config.dateTiles).unix();
+        if(tile.d < tileDate) {
+          //console.log(tile.d, tileDate);
+          //console.log("update tile 4");
+          updateTile = true;
+        }
+      }
+      else if (config.updateTiles && !config.updateDifferent && !config.updateDateTiles) {
+        //console.log("update tile 5");
+        updateTile = true;
+      }
+    }
+    //--------------------------------------------------------------------------
+    //If need to get tile from internet
+    //--------------------------------------------------------------------------
+    if(downloadTile || updateTile) {
+      //Wait delay in config to prevent server request overloading
+      await wait(this.config.request.delay);
+      //Try to get tile from server
+      netTile = await this._httpEngine.get(url, this.config, "arraybuffer");
+    }
+    //--------------------------------------------------------------------------
+    //If tile image received from internet
+    //--------------------------------------------------------------------------
+    if(netTile && netTile != 404) {
+      //If need to get tile from internet and tile missing in DB
+      if(downloadTile && !tile) {
+        //Insert tile into DB
+        await db.saveTile(z, x, y, this.storage, netTile.data, netTile.data.byteLength, this._mapVersion);
+      }
+      //If need update tile only if different
+      if(config.updateTiles && config.updateDifferent) {
+        //Generate tile from net hash
+        let tileHash = Math.abs(CRC32.bstr(new Buffer.from( netTile.data, 'binary' ).toString('utf8')));
+        //If tile from net hash is different tile from DB hash
+        if(tileHash != tile.h) {
+          updateTile = true;
+        }
+      }
+      //If need update tile
+      if(updateTile) {
+        if(tile) {
+          //Insert or update tile in DB
+          await db.updateTile(z, x, y, this.storage, netTile.data, netTile.data.byteLength, this._mapVersion);
+        }
+        else {
+          //Insert tile into DB
+          await db.saveTile(z, x, y, this.storage, netTile.data, netTile.data.byteLength, this._mapVersion);
+        }
+      }
+      //Format tile info
+      tile = {
+        b: netTile.data,
+        s: netTile.data.byteLength,
+        //Set that tile was downloaded
+        method: "http"
+      }
+      return tile;
+      //If tile exist in db and need update
+    }
+    //--------------------------------------------------------------------------
+    //If get empty tile from internet
+    //--------------------------------------------------------------------------
+    if(netTile == 404) {
+      if(config.emptyTiles) {
+        if(tile) {
+          //Insert or update tile in DB
+          await db.updateTile(z, x, y, this.storage, "", 0, this._mapVersion);
+        }
+        else {
+          //Insert tile into DB
+          await db.saveTile(z, x, y, this.storage, "", 0, this._mapVersion);
+        }
+      }
+      //Show error message
+      Log.make("warning", "MAP", url);
+      //Return empty tile
+      return 404;
+    }
+    //If tile in DB and we reach this point, just return tile from DB
+    if(tile) return tile;
+    //Show error message
+    Log.make("error", "MAP", url);
+    //Return false
+    return false;
+  }
+
+  async getTileMain2(z, x, y, url, mode) {
     //Reset tile info
     let tile = "";
     //Switch of network state

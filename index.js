@@ -51,7 +51,7 @@ global.GEOMETRY = new geometry();
 //Global list of tiles required by GET
 let arrTilesList = [];
 //Global list of tiles required by download jobs
-let arrJobTilesList = [];
+global.arrJobTilesList = [];
 //Global list of threads state
 let threadRunList = [];
 //Global list of maps (now not yet used)
@@ -65,6 +65,7 @@ app.use(express.static(process.mainModule.path + '/public'));
 
 app.use('/marks', require('./routes/marks.js'));
 app.use('/map', require('./routes/map.js'));
+app.use('/job', require('./routes/job.js'));
 //------------------------------------------------------------------------------
 //HTTP Server: GET request for tiles
 //------------------------------------------------------------------------------
@@ -120,20 +121,6 @@ app.get(["/tile", "/layouts/tile", "/old/tile"], async function(request, respons
     //Запускаем потоки загрузки
     threadsStarter();
   }
-});
-//------------------------------------------------------------------------------
-//HTTP Server: Request to download job
-//------------------------------------------------------------------------------
-app.get("/job", async function(request, response){
-  //Получаем данные из запроса
-  let parseReq = url.parse(request.url, true);
-  //Получаем данный для загрузки тайлов
-  let jobConfig = parseReq.query;
-  //Push job order to list
-  jobConfig.running = false;
-  jobConfig.mode = config.network.state;
-  arrJobList.push(jobConfig);
-  IO.emit("setJobList", arrJobList);
 });
 //------------------------------------------------------------------------------
 //Get request for cached tile map
@@ -258,7 +245,12 @@ async function tilesService(threadNumber) {
           //If have conected map handler just get it
           map = arrMaps[jobTile.map];
           //Handle tile download logick
-          tile = await map.getTile(jobTile.z, jobTile.x, jobTile.y, jobTile.mode);
+          if(statType == "job") {
+            tile = await map.getTile(jobTile.z, jobTile.x, jobTile.y, "internet", currentJob);
+          }
+          else {
+            tile = await map.getTile(jobTile.z, jobTile.x, jobTile.y, jobTile.mode);
+          }
           //If tile handled
           if (tile && tile != 404) {
             //If tile was received by http request
@@ -544,9 +536,9 @@ IO.on('connection', async function(socket){
 //Job List handler
 //------------------------------------------------------------------------------
 //Init jobs list
-let arrJobList = [];
+global.arrJobList = [];
 //Init curent job config
-let currentJob = {};
+global.currentJob = {};
 
 //------------------------------------------------------------------------------
 //Init
@@ -620,8 +612,6 @@ let currentJob = {};
         stat.job.size = 0;
         stat.job.skip = 0;
         stat.job.time = 0;
-        //Send job list to client
-        IO.emit("setJobList", arrJobList);
         //Loop for all available zoom levels for download
         for(let i = 4; i <= 20; i++) {
           //If zoom level required for download
@@ -642,7 +632,7 @@ let currentJob = {};
           stat.job.queue = arrJobTilesList.length;
           Log.make("info", "MAIN", "Job started. Tile Count: " + arrJobTilesList.length);
           //Start threads
-          threadsStarter();
+          //threadsStarter();
         }
       }
     }

@@ -25,17 +25,116 @@ function secondsToHms(d) {
     return hDisplay + mDisplay + sDisplay;
 }
 
+$.jsonPost = function(url, data, func = false) {
+  if(typeof data == "function") {
+    $.ajax({
+      method: "post",
+      url: url,
+      dataType: "json",
+      success: data
+    });
+  }
+  else if(func == "alert") {
+    if(typeof data == "object" || Array.isArray(data)) {
+      data = JSON.stringify(data);
+    }
+    $.ajax({
+      method: "post",
+      url: url,
+      data: {data: data},
+      dataType: "json",
+      success: (response, code) => {
+        if(responce.result == true) {
+          alertify.success(response.message);
+        }
+        else {
+          alertify.error(response.message);
+        }
+      }
+    });
+  }
+  else {
+    if(typeof data == "object" || Array.isArray(data)) {
+      data = JSON.stringify(data);
+    }
+    $.ajax({
+      method: "post",
+      url: url,
+      data: {data: data},
+      dataType: "json",
+      success: func
+    });
+  }
+}
+
+function generateJobList(arrJobList) {
+  let jobHTML = "";
+  for(i = 0; i < arrJobList.length; i++) {
+    let zString = "";
+    for(let z = 4; z <= 20; z++) {
+      if(arrJobList[i]['z' + z]) {
+        zString += `z${z};`;
+      }
+    }
+    let color = `bg-soft-primary text-primary`;
+    if(i == 0) {
+      color = `bg-soft-success text-success`;
+    }
+    jobHTML += `<li class="activity-list">
+      <div class="activity-icon avatar-md">
+          <span class="avatar-title ${color} rounded-circle">
+          ${(i+1)}
+          </span>
+      </div>
+      <div class="d-flex">
+          <div class="flex-grow-1 overflow-hidden me-7">
+              <h5 class="font-size-14 mb-1">Polygon ID ${arrJobList[i]['polygonID']} ${zString}</h5>
+              <p class="text-truncate text-muted font-size-13">${arrJobList[i]['mapID']}</p>
+          </div>
+
+          <div class="flex-shrink-0 text-end">
+              <div class="dropdown">
+                  <a class="text-muted dropdown-toggle font-size-24" role="button" data-bs-toggle="dropdown" aria-haspopup="true">
+                      <i class="mdi mdi-dots-vertical"></i>
+                  </a>
+
+                  <div class="dropdown-menu dropdown-menu-end">
+                      <a class="dropdown-item" href="#" onclick="manageJob('${arrJobList[i]['ID']}', 'up')">Move UP</a>
+                      <a class="dropdown-item" href="#" onclick="manageJob('${arrJobList[i]['ID']}', 'down')">Move DOWN</a>
+                      <div class="dropdown-divider"></div>
+                      <a class="dropdown-item" href="#" onclick="manageJob('${arrJobList[i]['ID']}', 'delete')">DELETE</a>
+                  </div>
+              </div>
+          </div>
+      </div>
+    </li>`;
+  }
+  $("#jobsList").html(jobHTML);
+}
+
+function manageJob(jobID, mode) {
+  $.jsonPost("/job/manage", {ID: jobID, mode: mode}, (response) => {
+    if(response.result) {
+      generateJobList(response.list);
+      alertify.success(response.message);
+    }
+    else {
+      alertify.error(response.message);
+    }
+  });
+}
+
 $(document).ready(() => {
   $("input[name='updateTiles']").on("click", () => {
     if($("input[name='updateTiles']").is(":checked")) {
       $("input[name='updateDifferent']").attr("disabled", false);
-      $("input[name='updateDateTile']").attr("disabled", false);
-      $("input[name='dateTile']").attr("disabled", false);
+      $("input[name='updateDateTiles']").attr("disabled", false);
+      $("input[name='dateTiles']").attr("disabled", false);
     }
     else {
       $("input[name='updateDifferent']").attr("disabled", true);
-      $("input[name='updateDateTile']").attr("disabled", true);
-      $("input[name='dateTile']").attr("disabled", true);
+      $("input[name='updateDateTiles']").attr("disabled", true);
+      $("input[name='dateTiles']").attr("disabled", true);
     }
   });
   $("input[name='checkEmptyTiles']").on("click", () => {
@@ -49,66 +148,27 @@ $(document).ready(() => {
     }
   });
 
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
   //Send to server new job ORDER
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+
   $("#startJob").on("click", function(e) {
   	$("#jobModal").modal('hide');
-    let jobConfig = $("#jobForm").serialize();
-    $.ajax({
-      url: "/job",
-      data: jobConfig,
+    let jobConfig = $("#jobForm").serializeArray().reduce(function(a, x) { a[x.name] = x.value; return a; }, {});
+    $.jsonPost("/job/add", jobConfig, (response) => {
+      if(response.result) {
+        generateJobList(response.list);
+      }
     });
-  	//socket.emit("jobAdd", jobConfig);
   });
 
   //------------------------------------------------------------------------------
   //Request for jobs list on server
   //------------------------------------------------------------------------------
-  socket.emit("getJobList");
-  socket.on("setJobList", (arrJobList) => {
-    let jobHTML = "";
-    for(i = 0; i < arrJobList.length; i++) {
-      let zString = "";
-      for(let z = 4; z <= 20; z++) {
-        if(arrJobList[i]['z' + z]) {
-          zString += `z${z};`;
-        }
-      }
-      let color = `bg-soft-primary text-primary`;
-      if(i == 0) {
-        color = `bg-soft-success text-success`;
-      }
-      jobHTML += `<li class="activity-list">
-        <div class="activity-icon avatar-md">
-            <span class="avatar-title ${color} rounded-circle">
-            ${(i+1)}
-            </span>
-        </div>
-        <div class="d-flex">
-            <div class="flex-grow-1 overflow-hidden me-7">
-                <h5 class="font-size-14 mb-1">Polygon ID ${arrJobList[i]['polygonID']} ${zString}</h5>
-                <p class="text-truncate text-muted font-size-13">${arrJobList[i]['mapID']}</p>
-            </div>
-
-            <div class="flex-shrink-0 text-end">
-                <div class="dropdown">
-                    <a class="text-muted dropdown-toggle font-size-24" role="button" data-bs-toggle="dropdown" aria-haspopup="true">
-                        <i class="mdi mdi-dots-vertical"></i>
-                    </a>
-
-                    <div class="dropdown-menu dropdown-menu-end">
-                        <a class="dropdown-item" href="#">Move UP</a>
-                        <a class="dropdown-item" href="#">Move DOWN</a>
-                        <div class="dropdown-divider"></div>
-                        <a class="dropdown-item" href="#">DELETE</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-      </li>`;
+  $.jsonPost("/job/list", (response) => {
+    if(response.result) {
+      generateJobList(response.list);
     }
-    $("#jobsList").html(jobHTML);
   });
   //------------------------------------------------------------------------------
   //Log handling section
@@ -406,21 +466,15 @@ $(document).ready(() => {
 
       $("#formCategorySave").on("click", () => {
         let data = $("#formAddCategory").serialize();
-        $.ajax({
-          method: "post",
-          url: "/marks/category/add",
-          data: data,
-          dataType: "json",
-          success: async (responce, code) => {
-            if(responce.result == true) {
-              alertify.success(responce.message);
-              await updateCategoryList();
-              $("#marksManagerModal").modal('show');
-              $("#marksCategoryModal").modal('hide');
-            }
-            else {
-              alertify.error(responce.message);
-            }
+        $.jsonPost("/marks/category/add", data, async (response, code) => {
+          if(responce.result == true) {
+            alertify.success(response.message);
+            await updateCategoryList();
+            $("#marksManagerModal").modal('show');
+            $("#marksCategoryModal").modal('hide');
+          }
+          else {
+            alertify.error(response.message);
           }
         });
       });

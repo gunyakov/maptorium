@@ -128,7 +128,7 @@ class DB {
     //Try to get DB
     await this.getDB(z, x, y, storage);
     //SQL request to DB
-    let sql = "SELECT s, b FROM t WHERE x = ? AND y = ?;";
+    let sql = "SELECT s, b, d, h, v FROM t WHERE x = ? AND y = ?;";
     //Request tile from DB
     let results = await sqlite3.all(dbName, sql, [x, y]);
     //If request to DB is finished
@@ -166,12 +166,10 @@ class DB {
       let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]);
       //Если запрос вернул результат
       if(results) {
-        Log.make("success", "DB", "INSERT -> " + dbName);
         return true;
       }
       //Если запрос вернул пустой результат, значит база была закрыта
       else {
-        Log.make("error", "DB", "INSERT -> " + dbName);
         //Устанавливаем что базу нужно открыть в принудительном порядке
         return false;
       }
@@ -198,7 +196,7 @@ class DB {
     //If tile present in DB
     if(tile !== false) {
       //Update tile in DB
-      results = await sqlite3.run(dbName, "UPDATE t SET v = ?, s = ?, h = ?, d = ?, b = ? WHERE x = ? AND y = ?;", [mapVersion, parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob, x, y,]);
+      results = await sqlite3.run(dbName, "UPDATE t SET v = ?, s = ?, h = ?, d = ?, b = ? WHERE x = ? AND y = ?;", [mapVersion, parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob, x, y]);
       //If request to DB return true state
       if(results) {
         //Make log
