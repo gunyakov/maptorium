@@ -106,6 +106,11 @@ $(document).ready(() => {
       iconCls: "mdi mdi-auto-download"
     },
     {
+      text: 'Generate map',
+      callback: window.showJobGenerateModal,
+      iconCls: "mdi mdi-auto-download"
+    },
+    {
       text: 'Show tile cached map for main map',
       iconCls: "mdi mdi-data-matrix-plus",
       contextmenuItems: [{
@@ -516,7 +521,7 @@ $(document).ready(() => {
   //------------------------------------------------------------------------------
   socket.on("setMapList", (data) => {
     $("#jobMap").html('');
-
+    $("#jobMapGenerate").html('');
     arrMenuMap = [];
     arrMenuLayer = [];
 
@@ -531,7 +536,8 @@ $(document).ready(() => {
         mapID: mapInfo.id,
   		});
 
-  		$("#jobMap").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`)
+  		$("#jobMap").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`);
+      $("#jobMapGenerate").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`)
   		if(mapInfo.type == "map") {
         if(typeof arrMenuMap[mapInfo.submenu] == "undefined") {
           arrMenuMap[mapInfo.submenu] = [];

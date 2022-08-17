@@ -16,6 +16,11 @@ let stat = {
     skip: 0,
     queue: 0,
     time: 0
+  },
+  generate: {
+    total: 0,
+    procesed: 0,
+    skip: 0
   }
 }
 

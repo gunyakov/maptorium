@@ -12,7 +12,7 @@ I'm looking for good html coder and who know leaflet library/how to write leafle
 
 This software can help you to download localy any tile map (now only raster type is supported). Curently you can select Google Sattelite, OSM or Yandex Sattelite map as sourse and Google Hybrid and Yandex Hybrid map as layers.
 
-![Stat](/stat.png)
+[![Maptorium promo video](http://img.youtube.com/vi/cgqhKeX2Nk4/0.jpg)](https://youtu.be/cgqhKeX2Nk4)
 
 ### Installation
 
@@ -57,7 +57,9 @@ Next futures to add:
 
 ### Version
 
-Very early version 0.8.8. Under heavy development
+Very early version 0.8.9. Under heavy development
+
+17.08.2022 - Random tile download mode. (See promo video how it`s work.)
 
 16.08.2022 - Version 0.8.8. Middle update of job manager.
 

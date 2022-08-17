@@ -56,6 +56,9 @@ class Map {
     //Chech if tile exist in DB
     tile = await this.checkTile(z, x, y, this.starage);
 
+    //If disable get tiles from internet return any result
+    if(mode == "disable") return tile;
+
     //If tile empty and need check empty tiles
     if(tile.s == 0 && config.checkEmptyTiles && !config.updateDateEmpty) {
       //console.log("update tile 1");
@@ -176,112 +179,6 @@ class Map {
     //Return false
     return false;
   }
-
-  async getTileMain2(z, x, y, url, mode) {
-    //Reset tile info
-    let tile = "";
-    //Switch of network state
-    switch (mode) {
-      //------------------------------------------------------------------------
-      //Internet & Cache mode
-      //------------------------------------------------------------------------
-      case "enable":
-        //Try to get tile from DB
-        tile = await this.checkTile(z, x, y, this.storage);
-        //If tile is present in DB
-        if(tile) {
-          //Return tile
-          return tile;
-        }
-        //If tile is missing in DB
-        else {
-          //Wait delay in config to prevent server request overloading
-          await wait(this.config.request.delay);
-          //Try to get tile from server
-          tile = await this._httpEngine.get(url, this.config, "arraybuffer");
-          //If received tile from server or 404 code
-          if(tile && tile != 404) {
-            //Insert tile into DB
-            await db.saveTile(z, x, y, this.storage, tile.data, tile.data.byteLength, this._mapVersion);
-            //Format tile info
-            tile = {
-              b: tile.data,
-              s: tile.data.byteLength,
-              //Set that tile was downloaded
-              method: "http"
-            }
-            //Return tile
-            return tile;
-          }
-          //If tile missing on server
-          else {
-            if(tile == 404) {
-              //Show error message
-              Log.make("warning", "MAP", url);
-              await db.saveTile(z, x, y, this.storage, '', 0, this._mapVersion);
-              //Return empty tile
-              return 404;
-            }
-            else {
-              //Show error message
-              Log.make("error", "MAP", url);
-              //Return false
-              return false;
-            }
-          }
-        }
-        break;
-      //------------------------------------------------------------------------
-      //Cache mode
-      //------------------------------------------------------------------------
-      case "disable":
-        //Try to get tile from DB
-        tile = await this.checkTile(z, x, y, this.storage);
-        //Return result
-        return tile;
-        break;
-      //------------------------------------------------------------------------
-      //Internet mode
-      //------------------------------------------------------------------------
-      case "force":
-        //Wait delay in config to prevent server request overloading
-        await wait(this.config.request.delay);
-        //Try to get tile from server
-        tile = await this._httpEngine.get(url, this.config, "arraybuffer").catch((error) => { Log.make("error", "MAP", error) });
-        //If received tile from server
-        if(tile && tile != 404) {
-          //If enable to write into DB
-          if(this.config.db.ReadOnly === false) {
-            //Insert or update tile in DB
-            await db.updateTile(z, x, y, this.storage, tile.data, tile.data.byteLength, this._mapVersion);
-          }
-          //Format tile info
-          tile = {
-            b: tile.data,
-            s: tile.data.byteLength,
-            method: "http"
-          }
-          //Return tile
-          return tile;
-        }
-        //If tile missing on server
-        else {
-          if(tile == 404) {
-            //Show error message
-            Log.make("warning", "MAP", url);
-            //Return empty tile
-            return 404;
-          }
-          else {
-            //Show error message
-            Log.make("error", "MAP", url);
-            //Return false
-            return false;
-          }
-        }
-        break;
-    }
-  }
   //----------------------------------------------------------------------------
   //Check if tile is present in DB
   //----------------------------------------------------------------------------
@@ -300,6 +197,13 @@ class Map {
       //Return false
       return false;
     }
+  }
+  //----------------------------------------------------------------------------
+  //Save tile (for generate map functions)
+  //----------------------------------------------------------------------------
+  async saveTile(z, x, y, tile) {
+    //Insert or update tile in DB
+    return await db.updateTile(z, x, y, this.storage, tile.data, tile.byteLength, 0);
   }
 }
 

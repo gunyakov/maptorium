@@ -19,6 +19,17 @@ router.post("/add", async function(req, res){
   arrJobList.push(jobConfig);
   res.json({result: true, list: arrJobList});
 });
+//------------------------------------------------------------------------------
+//HTTP Server: Request to generate map job
+//------------------------------------------------------------------------------
+router.post("/generate", async function(req, res){
+  //Получаем данный для загрузки тайлов
+  let jobConfig = JSON.parse(req.body.data);
+  //Push job order to list
+  jobConfig.running = false;
+  arrJobGenerateList.push(jobConfig);
+  res.json({result: true, message: "Generate job added/started."});
+});
 
 router.post("/manage", async (req, res) => {
   let data = JSON.parse(req.body.data);

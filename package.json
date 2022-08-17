@@ -29,6 +29,7 @@
     "array-move": "^4.0.0",
     "axios": "^0.25.0",
     "body-parser": "^1.20.0",
+    "canvas": "^2.9.3",
     "cheerio": "^1.0.0-rc.12",
     "colors": "^1.4.0",
     "crc-32": "^1.2.1",
@@ -47,7 +48,8 @@
     "scripts": [
       "src/*.js",
       "maps/*.js",
-      "public/*"
+      "public/*",
+      "routes/*.js"
     ],
     "targets": [
       "node16-win-x64"

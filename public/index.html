@@ -838,6 +838,12 @@
                         </label>
                         <hr width="80%">
                         <div class="form-check mb-3">
+                          <input class="form-check-input" type="checkbox" name="randomDownload" value="true">
+                          <label class="form-check-label">
+                              Random download mode.
+                          </label>
+                        </div>
+                        <div class="form-check mb-3">
                           <input class="form-check-input" type="checkbox" name="updateTiles" value="true">
                           <label class="form-check-label">
                               Overwrite old tiles.
@@ -993,6 +999,197 @@
           </div>
         </div>
         <!--/Modal for Download job-->
+        <!--Modal for Generate Map job-->
+        <div class="modal fade" id="jobGenerateModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Generate tiles from lower layer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form id="jobFormGenerate" width="100%">
+                  <input type="hidden" name="polygonID" value="0" id="polygonIDGenerate">
+                  <div class="row row-cols-2 g-0">
+                    <div class="col-sm-10">
+                        <h5 class="font-size-14 mb-3"><i class="mdi mdi-arrow-right text-primary me-1"></i> Options</h5>
+                        <div class="mb-3 col-sm-11">
+                          <label for="recipient-name" class="col-form-label">Map:</label>
+                          <select class="form-select" aria-label="Default select example" id="jobMapGenerate" name="mapID">
+                            <option selected value="0">Select map</option>
+                          </select>
+                        </div>
+                        <label class="form-check-label">
+                            Number of tiles: 0
+                        </label>
+                        <hr width="80%">
+                        <div class="form-check mb-3">
+                          <input class="form-check-input" type="checkbox" name="updateTiles" value="true">
+                          <label class="form-check-label">
+                              Overwrite existing tiles.
+                          </label>
+                        </div>
+                        <div class="form-check mb-3">
+                          <input class="form-check-input" type="checkbox" name="completeTiles" value="true">
+                          <label class="form-check-label">
+                              Save only complete tiles.
+                          </label>
+                        </div>
+                      </div>
+                    <div class="col-sm-2">
+                      <div class="mb-3 col-sm-11">
+                        <label for="recipient-name" class="col-form-label">From zoom:</label>
+                        <select class="form-select" aria-label="Default select example" name="fromZoom">
+                          <option selected value="20">20</option>
+                          <option selected value="19">19</option>
+                          <option selected value="18">18</option>
+                          <option selected value="17">17</option>
+                          <option selected value="16">16</option>
+                          <option selected value="15">15</option>
+                          <option selected value="14">14</option>
+                          <option selected value="13">13</option>
+                          <option selected value="12">12</option>
+                          <option selected value="11">11</option>
+                          <option selected value="10">10</option>
+                          <option selected value="9">9</option>
+                          <option selected value="8">8</option>
+                        </select>
+                      </div>
+                        <h5 class="font-size-14 mb-3"><i class="mdi mdi-arrow-right text-primary me-1"></i> To zooms:</h5>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z4" value="true">
+                          <label class="form-check-label">
+                              Z04
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z5" value="true">
+                          <label class="form-check-label">
+                              Z05
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z6" value="true">
+                          <label class="form-check-label">
+                              Z06
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z7" value="true">
+                          <label class="form-check-label">
+                              Z07
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z8" value="true">
+                          <label class="form-check-label">
+                              Z08
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z9" value="true">
+                          <label class="form-check-label">
+                              Z09
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z10" value="true">
+                          <label class="form-check-label">
+                              Z10
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z11" value="true">
+                          <label class="form-check-label">
+                              Z11
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z12" value="true">
+                          <label class="form-check-label">
+                              Z12
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z13" value="true">
+                          <label class="form-check-label">
+                              Z13
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z14" value="true">
+                          <label class="form-check-label">
+                              Z14
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z15" value="true">
+                          <label class="form-check-label">
+                              Z15
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z16" value="true">
+                          <label class="form-check-label">
+                              Z16
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z17" value="true">
+                          <label class="form-check-label">
+                              Z17
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z18" value="true">
+                          <label class="form-check-label">
+                              Z18
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z19" value="true">
+                          <label class="form-check-label">
+                              Z19
+                          </label>
+                        </div>
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" name="z20" value="true">
+                          <label class="form-check-label">
+                              Z20
+                          </label>
+                        </div>
+                      </div>
+                  </div>
+              </form>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="startJobGenerate">Add job to list</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!--/Modal for Generate Map job-->
+        <div class="modal fade" id="jobGenerateProgress" tabindex="-1" role="dialog" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered modal-md" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Generate map progress</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="col-sm-12" id="jobGenerateStat">
+                  Generated 0/0 tiles
+                </div>
+                <div class="col-sm-12">
+                  <div class="progress">
+                    <div id="jobGenerateBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <!--Panel for marks editing-->
         <div style="z-index: 2000; position: absolute; left: 100px; top: 400px; background-color: white; display: none;" id="intrumentalPanel">
           <button type="button" class="btn btn-light" id="panelMoveBtn"><i class="mdi mdi-cursor-move"></i></button>

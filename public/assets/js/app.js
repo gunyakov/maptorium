@@ -162,6 +162,20 @@ $(document).ready(() => {
     });
   });
 
+  $("#startJobGenerate").on("click", function(e) {
+  	$("#jobGenerateModal").modal('hide');
+    let jobConfig = $("#jobFormGenerate").serializeArray().reduce(function(a, x) { a[x.name] = x.value; return a; }, {});
+    $.jsonPost("/job/generate", jobConfig, "alert");
+    $("#jobGenerateProgress").modal("show");
+  });
+
+  socket.on("stat-generate", (data) => {
+    $("#jobGenerateStat").html(`Processed ${data.procesed} tiles from ${data.total}. Skip: ${data.skip}`);
+    let percent = Math.floor((data.procesed / data.total) * 100);
+    console.log(percent);
+    $("#jobGenerateBar").attr("aria-valuenow", percent);
+    $("#jobGenerateBar").css("width", `${percent}%`);
+  });
   //------------------------------------------------------------------------------
   //Request for jobs list on server
   //------------------------------------------------------------------------------
@@ -518,6 +532,13 @@ $(document).ready(() => {
       window.showJobModal = function(e) {
         $("#polygonID").val(e.relatedTarget.maptoriumID);
         $("#jobModal").modal('show');
+      }
+      //------------------------------------------------------------------------------
+      //Show config window for job order
+      //------------------------------------------------------------------------------
+      window.showJobGenerateModal = function(e) {
+        $("#polygonIDGenerate").val(e.relatedTarget.maptoriumID);
+        $("#jobGenerateModal").modal('show');
       }
       //----------------------------------------------------------------------------
       //Context menu: GEOMETRY PROPERTIES

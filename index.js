@@ -6,7 +6,7 @@ global.config = require('./config.js');
 //------------------------------------------------------------------------------
 //Statistics
 //------------------------------------------------------------------------------
-let stat = require('./src/statistics.js');
+global.stat = require('./src/statistics.js');
 //------------------------------------------------------------------------------
 //MD5 to hashed tile names
 //------------------------------------------------------------------------------
@@ -19,6 +19,10 @@ global.wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 //Cached tile map
 //------------------------------------------------------------------------------
 //const CachedMap = require('./cachedmap');
+//------------------------------------------------------------------------------
+//Generate map tiles from lover zoom levels
+//------------------------------------------------------------------------------
+const {GenerateMap} = require('./src/generatemap');
 //------------------------------------------------------------------------------
 //Express with socket IO
 //------------------------------------------------------------------------------
@@ -52,6 +56,8 @@ global.GEOMETRY = new geometry();
 let arrTilesList = [];
 //Global list of tiles required by download jobs
 global.arrJobTilesList = [];
+//Global list for tiles required by map generate functions
+global.arrJobTilesGenerateList = [];
 //Global list of threads state
 let threadRunList = [];
 //Global list of maps (now not yet used)
@@ -227,8 +233,17 @@ async function tilesService(threadNumber) {
       }
       //If GET list empty but job list isn`t
       else if(arrJobTilesList.length > 0) {
-        //Take first tile and delete it
-        jobTile = arrJobTilesList.shift();
+        //If download in random mode
+        if(currentJob.randomDownload) {
+          //Get random tile
+          jobTile = arrJobTilesList.splice(Math.floor(Math.random() * arrJobTilesList.length), 1);
+          jobTile = jobTile[0];
+        }
+        //If download in normal mode
+        else {
+          //Take first tile and delete it
+          jobTile = arrJobTilesList.shift();
+        }
         //Set stat type
         statType = "job";
       }
@@ -539,7 +554,8 @@ IO.on('connection', async function(socket){
 global.arrJobList = [];
 //Init curent job config
 global.currentJob = {};
-
+//Init jobs list for map generate
+global.arrJobGenerateList = [];
 //------------------------------------------------------------------------------
 //Init
 //------------------------------------------------------------------------------
@@ -632,7 +648,43 @@ global.currentJob = {};
           stat.job.queue = arrJobTilesList.length;
           Log.make("info", "MAIN", "Job started. Tile Count: " + arrJobTilesList.length);
           //Start threads
-          //threadsStarter();
+          threadsStarter();
+        }
+      }
+    }
+    IO.emit("stat-generate", stat.generate);
+    if(arrJobTilesGenerateList.length == 0 && arrJobGenerateList.length > 0) {
+      //If first job in list already downloaded
+      if(arrJobGenerateList[0].running) {
+        //Delete job from list
+        arrJobGenerateList.shift();
+      }
+      //If first job in list isnt started yet
+      else {
+        //Sate state of first job
+        arrJobGenerateList[0].running = true;
+        //Loop for all available zoom levels for download
+        for(let i = 20; i > 4; i--) {
+          //If zoom level required for download
+          if(arrJobGenerateList[0]['z' + i] === 'true') {
+            //Create tile list for job
+            let tempArr = await GEOMETRY.tileList(arrJobGenerateList[0]['polygonID'], i, arrJobGenerateList[0]['mapID']);
+            //If create tile list for current zoom
+            if(Array.isArray(tempArr)) {
+              //Add tiles list to main Array
+              arrJobTilesGenerateList = arrJobTilesGenerateList.concat(tempArr);
+            }
+          }
+        }
+        console.log(arrJobGenerateList);
+        //If main tile list isn`t empty
+        if(arrJobTilesGenerateList.length > 0) {
+          Log.make("info", "MAIN", "Job generate started. Tile Count: " + arrJobTilesGenerateList.length);
+          //Start threads
+          GenerateMap(arrMaps[arrJobGenerateList[0]['mapID']], {
+            updateTiles: arrJobGenerateList[0]['updateTiles'] || false,
+            completeTiles: arrJobGenerateList[0]['completeTiles'] || true
+          });
         }
       }
     }
