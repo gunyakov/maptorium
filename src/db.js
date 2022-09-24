@@ -122,13 +122,13 @@ class DB {
   //----------------------------------------------------------------------------
   //Get tile from DB
   //----------------------------------------------------------------------------
-  async getTile(z, x, y, storage) {
+  async getTile(z, x, y, storage, getFull) {
     //Get folder + file name of DB
     let dbName = await this.getDBName(z, x, y, storage);
     //Try to get DB
     await this.getDB(z, x, y, storage);
     //SQL request to DB
-    let sql = "SELECT s, b, d, h, v FROM t WHERE x = ? AND y = ?;";
+    let sql = getFull ? "SELECT s, b, d, h, v FROM t WHERE x = ? AND y = ?;" : "SELECT s, d, h, v FROM t WHERE x = ? AND y = ?;";
     //Request tile from DB
     let results = await sqlite3.all(dbName, sql, [x, y]);
     //If request to DB is finished

@@ -29,14 +29,14 @@ let config = {
     //Enable tor change ID
     tor: false,
     //Type of proxy(socks, socks4, socks5, http, https)
-    protocol: "socks5",
+    protocol: "http",
     //Host can be IP or domain
-    host: '127.0.0.1',
+    host: '89.40.8.207',
     //Port
-    port: 9050,
+    port: 9099,
     auth: {
-      username: '',
-      password: '',
+      username: 'test',
+      password: 'test',
       tor: {
         HashedControlPassword: "16:872860B76453A77D60CA2BB8C1A7042072093276A3D701AD684053EC4C",
         ControlPort: 9051
@@ -57,9 +57,9 @@ let config = {
     },
     MAP: {
       success: false,
-      info: true,
+      info: false,
       error: true,
-      warning: true
+      warning: false
     },
     SQLITE3: {
       success: false,

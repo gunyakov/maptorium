@@ -28,8 +28,12 @@ function hideAllLayers() {
 //Add layer to map
 //------------------------------------------------------------------------------
 let addLayer = function (mapID) {
+  //console.log(arrLayersList[mapID]);
   arrLayersList[mapID].addTo(map);
-  arrLayersList[mapID].bringToFront();
+  //currentMap.bringToBack();
+  if(typeof arrLayersList[mapID].bringToFront === "function") {
+    arrLayersList[mapID].bringToFront();
+  };
 }
 //------------------------------------------------------------------------------
 //Section to be executed after document ready
@@ -525,17 +529,136 @@ $(document).ready(() => {
     arrMenuMap = [];
     arrMenuLayer = [];
 
+    let style = {
+      rendererFactory: L.canvas.tile,
+      attribution: "",
+      subdomains: '0123',	// 01234 for openmaptiles, abcd for mapbox
+      maxNativeZoom: 20,
+      vectorTileLayerStyles: {
+        water: [],
+        landcover: [],
+        landuse: [],
+        mountain_peak: [],
+        boundary: function(properties, zoom) {
+          //console.log(properties);
+          var level = properties.admin_level;
+          let style = {
+            color: "hsl(248, 7%, 66%)",
+            fillOpacity: 0
+          }
+          if (level == 2) {
+            if(zoom > 0) style.weight = 0.6;
+            if(zoom > 4) style.weight = 1.4;
+            if(zoom > 5) style.weight = 2;
+            if(zoom > 12) style.weight = 8;
+            if(properties.maritime) style.color = "hsl(205,42%,72%)";
+          }
+          if(level == 4) {
+            if(zoom > 0) style.weight = 0;
+            if(zoom > 4) style.weight = 0.4;
+            if(zoom > 5) style.weight = 1;
+            if(zoom > 12) style.weight = 8;
+            style.dashArray = '3, 1, 1, 1';
+          }
+          return style;
+        },
+        transportation: function(properties, zoom) {
+
+          let style = {width: 1.2};
+
+          if(properties.class == 'motorway') {
+            style.color = "hsl(28,72%,69%)";
+            if(zoom > 0) style.width = 0;
+            if(zoom > 12) style.width = 1;
+            if(zoom > 13) style.width = 2;
+            if(zoom > 14) style.width = 4;
+            return style;
+          };
+          if(properties.class == 'trunk') {
+            //console.log(properties);
+            style.color = "hsl(46, 85%, 67%)";
+            if(zoom > 0) style.width = 0;
+            if(zoom > 12) style.width = 1;
+            if(zoom > 13) style.width = 2;
+            if(zoom > 14) style.width = 4;
+            return style;
+          }
+          if(properties.class == "minor") {
+            style.color = "hsl(0,0%,100%)";
+            if(zoom > 0) style.width = 0;
+            if(zoom > 12) style.width = 0.5;
+            if(zoom > 13) style.width = 1;
+            if(zoom > 14) style.width = 4;
+            return style;
+          }
+          if (zoom < 12) return [];
+          console.log(properties);
+          return [];
+        },
+        water_name: [],
+        transportation_name: [],
+        place: function(properties, zoom, coords) {
+          return [];
+          //console.log(properties);
+          if(properties.class == "town") {
+            return {icon: new L.divIcon({html: `<div>${properties.name}</div>`})};
+          }
+        },
+        waterway: [],
+        aeroway: [],
+        aerodrome_label: [],
+        globallandcover: [],
+        park: [],
+
+      }
+    }
+
   	for(i = 0; i < data.length; i++) {
   		let mapInfo = data[i];
-  		let tileLayer = L.tileLayer(`tile?map=${mapInfo.id}&z={z}&x={x}&y={y}`, {
-  			maxZoom: 20,
-  			attribution: mapInfo.attribution,
-  			tileSize: mapInfo.tileSize,
-  			zoomOffset: 0,
-        type: mapInfo.type,
-        mapID: mapInfo.id,
-  		});
+      let tileLayer = "";
+      if(mapInfo.format == "vector") {
+        //console.log(mapInfo);
+        /*tileLayer = L.vectorGrid.protobuf(`tile?map=${mapInfo.id}&z={z}&x={x}&y={y}`, style)
+  			.on('click', function(e) {	// The .on method attaches an event handler
+  				L.popup()
+  					.setContent(e.layer.properties.name || e.layer.properties.type)
+  					.setLatLng(e.latlng)
+  					.openOn(map);
 
+  				L.DomEvent.stop(e);
+  			});*/
+        tileLayer = L.mapboxGL({
+            accessToken: 'P2DGn4fI4cVJ928SF14v',
+            style: 'bright.json',
+            transformRequest: (url, resourceType) => {
+              //console.log(resourceType);
+              if(resourceType == "Tile") {
+                //console.log(url);
+                url = url.replace("https://api.maptiler.com/tiles/v3/", '');
+                url = url.split("/");
+                //console.log(url);
+                url[2] = url[2].split(".");
+                url[2] = url[2][0];
+                url = `http://${window.location.hostname}:${window.location.port}/tile?map=${mapInfo.id}&z=${url[0]}&x=${url[1]}&y=${url[2]}`;
+                //console.log(url);
+                return {
+                  url: url,
+                  credentials: 'include'  // Include cookies for cross-origin requests
+                };
+              }
+            }
+        });
+      }
+      else {
+        tileLayer = L.tileLayer(`tile?map=${mapInfo.id}&z={z}&x={x}&y={y}`, {
+    			maxZoom: 20,
+    			attribution: mapInfo.attribution,
+    			tileSize: mapInfo.tileSize,
+    			zoomOffset: 0,
+          type: mapInfo.type,
+          mapID: mapInfo.id,
+    		});
+      }
   		$("#jobMap").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`);
       $("#jobMapGenerate").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`)
   		if(mapInfo.type == "map") {
@@ -547,6 +670,7 @@ $(document).ready(() => {
   			if(!currentMap) {
   				currentMap = tileLayer;
   				currentMap.addTo(map);
+          currentMap.bringToBack();
   			}
   		}
   		if(mapInfo.type == "layer") {
@@ -555,9 +679,13 @@ $(document).ready(() => {
         }
         arrMenuLayer[mapInfo.submenu].push(mapInfo);
   			arrLayersList[mapInfo.id] = tileLayer;
-  			if(!currentLayer) {
+  			if(!currentLayer && mapInfo.format == "vector") {
   				currentLayer = tileLayer;
   				currentLayer.addTo(map);
+          currentLayer.bringToFront();
+          if(currentMap) {
+            currentMap.bringToBack();
+          }
   			}
   		}
   	}

@@ -7,6 +7,12 @@ router.use(express.urlencoded({ extended: true }));
 
 const {arrayMoveImmutable} = import('array-move');
 //------------------------------------------------------------------------------
+//HTTP Server: Request to get jobs list
+//------------------------------------------------------------------------------
+router.post("/list", async function(req, res) {
+  res.json({result: true, list: arrJobList});
+});
+//------------------------------------------------------------------------------
 //HTTP Server: Request to download job
 //------------------------------------------------------------------------------
 router.post("/add", async function(req, res){

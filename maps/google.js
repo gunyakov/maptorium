@@ -17,7 +17,8 @@ class ExtMap extends map {
       name: "Google Satellite",
       submenu: "Google",
       tileSize: 256,
-      attribution: ""
+      attribution: "",
+      content: "image/jpeg"
     };
   }
 

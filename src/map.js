@@ -31,7 +31,7 @@ class Map {
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
-  async getTile(z, x, y, mode = "enable", config = {updateTiles: false, updateDifferent: false, updateDateTiles: false, emptyTiles: true, checkEmptyTiles: false, updateDateEmpty: false}) {
+  async getTile(z, x, y, mode = {mode: "enable", getFull: false}, config = {updateTiles: false, updateDifferent: false, updateDateTiles: false, emptyTiles: true, checkEmptyTiles: false, updateDateEmpty: false}) {
     let tileUrl = await this.getURL(z, x, y);
     Log.make("info", "HTTP", tileUrl);
     let tile = await this.getTileMain(z, x, y, tileUrl, mode, config);
@@ -46,7 +46,6 @@ class Map {
   //Main tile handler
   //----------------------------------------------------------------------------
   async getTileMain (z, x, y, url, mode, config) {
-
     //Init default vars
     let tile = "";
     let downloadTile = false;
@@ -54,10 +53,10 @@ class Map {
     let netTile = false;
 
     //Chech if tile exist in DB
-    tile = await this.checkTile(z, x, y, this.starage);
+    tile = await this.checkTile(z, x, y, mode.getFull);
 
     //If disable get tiles from internet return any result
-    if(mode == "disable") return tile;
+    if(mode.mode == "disable") return tile;
 
     //If tile empty and need check empty tiles
     if(tile.s == 0 && config.checkEmptyTiles && !config.updateDateEmpty) {
@@ -81,13 +80,13 @@ class Map {
     //If tile missing or tile not empty
     if(!tile || tile.s > 0) {
       //If tile missing and network state get permition to download tile
-      if(!tile && mode != "disable") {
+      if(!tile && mode.mode != "disable") {
         //console.log("download tile 1");
         downloadTile = true;
       }
 
       //If tile exist but network mode set to force mode
-      if(tile && mode == "force") {
+      if(tile && mode.mode == "force") {
         //console.log("update tile 3");
         updateTile = true;
       }
@@ -182,9 +181,9 @@ class Map {
   //----------------------------------------------------------------------------
   //Check if tile is present in DB
   //----------------------------------------------------------------------------
-  async checkTile(z, x, y) {
+  async checkTile(z, x, y, getFull) {
     //Try to get tile from DB
-    let tile = await db.getTile(z, x, y, this.storage);
+    let tile = await db.getTile(z, x, y, this.storage, getFull);
     //If tile is present in DB
     if(tile) {
       //Set that tile was take from db

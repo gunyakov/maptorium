@@ -122,7 +122,10 @@ app.get(["/tile", "/layouts/tile", "/old/tile"], async function(request, respons
       y: q.y,
       z: q.z,
       response: response,
-      mode: q.mode
+      mode: {
+        mode: q.mode,
+        getFull: true
+      }
     });
     //Запускаем потоки загрузки
     threadsStarter();
@@ -261,7 +264,7 @@ async function tilesService(threadNumber) {
           map = arrMaps[jobTile.map];
           //Handle tile download logick
           if(statType == "job") {
-            tile = await map.getTile(jobTile.z, jobTile.x, jobTile.y, "internet", currentJob);
+            tile = await map.getTile(jobTile.z, jobTile.x, jobTile.y, {mode: "internet", getFull: false}, currentJob);
           }
           else {
             tile = await map.getTile(jobTile.z, jobTile.x, jobTile.y, jobTile.mode);
@@ -290,7 +293,7 @@ async function tilesService(threadNumber) {
             //If tile asked by Leaflet map
             if(response) {
               //Return tile to response
-              response.writeHead(200, {'Content-Type': 'image/*', "Content-Length": tile.s});
+              response.writeHead(200, {'Content-Type': map._info.content, "Content-Length": tile.s});
               response.end(tile.b);
             }
           }
@@ -612,6 +615,7 @@ global.arrJobGenerateList = [];
     if(arrJobTilesList.length == 0 && arrJobList.length > 0) {
       //If first job in list already downloaded
       if(arrJobList[0].running) {
+        Log.make("success", "MAIN", `Job for Polygon ${currentJob.polygonID} and Map ${currentJob.mapID} completed. Error: ${stat.job.error}. Skip: ${stat.job.skip}. Download: ${stat.job.download}.`);
         //Delete job from list
         arrJobList.shift();
       }
@@ -646,7 +650,7 @@ global.arrJobGenerateList = [];
           //Make stat
           stat.job.total = arrJobTilesList.length;
           stat.job.queue = arrJobTilesList.length;
-          Log.make("info", "MAIN", "Job started. Tile Count: " + arrJobTilesList.length);
+          Log.make("success", "MAIN", `Job started for Polygon ${currentJob.polygonID} and Map ${currentJob.mapID}. Tile Count: ${arrJobTilesList.length}`);
           //Start threads
           threadsStarter();
         }

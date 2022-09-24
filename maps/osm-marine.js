@@ -17,7 +17,8 @@ class ExtMap extends map {
       name: "OSM Marine",
       submenu: "Marine",
       tileSize: 256,
-      attribution: ""
+      attribution: "",
+      content: "image/png"
     };
   }
 

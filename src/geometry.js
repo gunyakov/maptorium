@@ -7,6 +7,10 @@ sqlite3 = new sqlite3();
 //Checker tiles inside polygon or not
 //------------------------------------------------------------------------------
 let pointInPolygon = require('point-in-polygon');
+
+
+var turf = require('@turf/turf');
+let union = require('@turf/union');
 //------------------------------------------------------------------------------
 //General geometry storage
 //------------------------------------------------------------------------------
@@ -17,6 +21,11 @@ class Geometry {
     this.time = Math.floor(Date.now() / 1000);
     this.state = "close";
     this.routeID = false;
+    this.cachedMap = {
+      ID: 0,
+      tileList: [],
+      zoom: 0
+    }
     this.routeGetID();
     this.service();
   }
@@ -297,7 +306,7 @@ class Geometry {
   //Generate tiles list for job list
   //----------------------------------------------------------------------------
   async tileList(ID, requiredZoom, map = "google") {
-    Log.make('info', "MAIN", `Start calculation tiles list for polygon ${ID} and zoom ${requiredZoom}`);
+    Log.make('success', "MAIN", `Start calculation tiles list for Polygon ${ID} and Zoom ${requiredZoom}`);
     let geometry = await this.get(parseInt(ID));
     if(geometry) {
       geometry = geometry[0];
@@ -358,7 +367,7 @@ class Geometry {
 
           }
         }
-        Log.make("info", "MAIN", `Calculation of tiles list is finished. Total ${arrJobTilesList.length} tiles.`);
+        Log.make("success", "MAIN", `Calculation of tiles list is finished. Total ${arrJobTilesList.length} tiles.`);
         //Return tiles job list
         return arrJobTilesList;
       }

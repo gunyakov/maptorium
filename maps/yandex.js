@@ -17,7 +17,8 @@ class ExtMap extends map {
       name: "Yandex Satellite",
       submenu: "Yandex",
       tileSize: 256,
-      attribution: "Satellite (Yandex.Maps)"
+      attribution: "Satellite (Yandex.Maps)",
+      content: "image/jpeg"
     };
   }
 

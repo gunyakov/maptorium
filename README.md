@@ -10,7 +10,7 @@ I'm looking for good html coder and who know leaflet library/how to write leafle
 
 ![Main UI](/main.png)
 
-This software can help you to download localy any tile map (now only raster type is supported). Curently you can select Google Sattelite, OSM or Yandex Sattelite map as sourse and Google Hybrid and Yandex Hybrid map as layers.
+This software can help you to download localy any tile map (now raster anv vector MapBox type is supported).
 
 [![Maptorium promo video](http://img.youtube.com/vi/cgqhKeX2Nk4/0.jpg)](https://youtu.be/cgqhKeX2Nk4)
 
@@ -26,7 +26,7 @@ npm install
 npm start
 ```
 
-After navigate in browser to http://localhost:9000
+After navigate in browser to http://localhost:9009
 
 If you have any problems during SQLite3 module compilation, run next command
 
@@ -57,7 +57,9 @@ Next futures to add:
 
 ### Version
 
-Very early version 0.8.9. Under heavy development
+Very early version 0.9.2. Under heavy development
+
+24.09.2022 - Vector tiles (MapBox) support.
 
 17.08.2022 - Random tile download mode. (See promo video how it`s work.)
 
