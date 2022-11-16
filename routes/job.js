@@ -5,7 +5,9 @@ const crypto = require("crypto");
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
 
-const {arrayMoveImmutable} = import('array-move');
+//const {arrayMoveImmutable} = import('array-move');
+//import {arrayMoveImmutable} from 'array-move';
+let arrayFunc = require("array-move");
 //------------------------------------------------------------------------------
 //HTTP Server: Request to get jobs list
 //------------------------------------------------------------------------------
@@ -55,7 +57,7 @@ router.post("/manage", async (req, res) => {
     case "up":
       for(let i = 0; i < arrJobList.length; i++) {
         if(arrJobList[i]['ID'] == data.ID) {
-          arrJobList = arrayMoveImmutable(arrJobList, i, i - 1);
+          arrJobList = arrayFunc.arrayMoveImmutable(arrJobList, i, i - 1);
         }
       }
       res.json({result: true,message: "Job was moved up.", list: arrJobList});
@@ -63,7 +65,7 @@ router.post("/manage", async (req, res) => {
     case "down":
       for(let i = 0; i < arrJobList.length; i++) {
         if(arrJobList[i]['ID'] == data.ID) {
-          arrJobList = arrayMoveImmutable(arrJobList, i, i + 1);
+          arrJobList = arrayFunc.arrayMoveImmutable(arrJobList, i, i + 1);
         }
       }
       res.json({result: true,message: "Job was moved down.", list: arrJobList});

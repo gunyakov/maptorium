@@ -2,7 +2,7 @@
 
 ### Help me pls
 
-I'm looking for good html coder and who know leaflet library/how to write leaflet plugins very well to fully rewrite User UI and add a lot of futures inside.
+I'm looking for good html coder and who know leaflet library/how to write leaflet plugins very well to fully rewrite User UI and add a lot of futures inside. [Join Telegram Groupe to contribute or ask questions](https://t.me/maptorium)
 
 ## Tile Map Downloader
 
@@ -10,7 +10,7 @@ I'm looking for good html coder and who know leaflet library/how to write leafle
 
 ![Main UI](/main.png)
 
-This software can help you to download localy any tile map (now raster anv vector MapBox type is supported).
+This software can help you to download localy any tile map (now raster and vector MapBox type is supported).
 
 [![Maptorium promo video](http://img.youtube.com/vi/cgqhKeX2Nk4/0.jpg)](https://youtu.be/cgqhKeX2Nk4)
 
@@ -57,7 +57,9 @@ Next futures to add:
 
 ### Version
 
-Very early version 0.9.2. Under heavy development
+Very early version 0.9.5. Under heavy development
+
+16.11.2022 - Polygons merge by Tuff.js
 
 24.09.2022 - Vector tiles (MapBox) support.
 

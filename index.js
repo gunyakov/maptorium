@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+global.pm2 = require('@pm2/io')
+
+pm2.init({
+  transactions: true, // will enable the transaction tracing
+  http: true // will enable metrics about the http server (optional)
+});
+
 //------------------------------------------------------------------------------
 //Config
 //------------------------------------------------------------------------------

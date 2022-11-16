@@ -1,13 +1,13 @@
 {
   "name": "maptorium",
-  "version": "0.8.3",
+  "version": "0.9.2",
   "description": "Google Sat Map Grabber",
   "bin": "index.js",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": ""
+    "build": "nexe -r public/**/*"
   },
   "repository": {
     "type": "git",
@@ -31,7 +31,6 @@
     "array-move": "^4.0.0",
     "axios": "^0.25.0",
     "body-parser": "^1.20.0",
-    "canvas": "^2.9.3",
     "cheerio": "^1.0.0-rc.12",
     "colors": "^1.4.0",
     "crc-32": "^1.2.1",
@@ -40,7 +39,9 @@
     "jsonfile": "^6.1.0",
     "md5": "^2.3.0",
     "moment": "^2.29.4",
+    "pm2": "^5.2.2",
     "point-in-polygon": "^1.1.0",
+    "sharp": "^0.31.1",
     "socket.io": "^4.4.1",
     "socket.io-client": "^4.4.1",
     "socks-proxy-agent": "^6.1.1",
@@ -54,7 +55,7 @@
       "routes/*.js"
     ],
     "targets": [
-      "node16-win-x64"
+      "node16-win"
     ],
     "outputPath": "."
   }

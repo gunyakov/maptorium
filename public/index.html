@@ -182,6 +182,7 @@
                                                                         <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 3)">+3</button>
                                                                         <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 4)">+4</button>
                                                                         <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(0, 5)">+5</button>
+                                                                        <button type="button" class="btn btn-outline-secondary" onclick="setTileGrid(-1, -1)">Hide Grid</button>
                                                                       </div>
                                                                   </div>
                                                               </div>
@@ -545,28 +546,57 @@
             <!-- Start right Content here -->
             <!-- ============================================================== -->
             <div class="main-content">
-                <div id="leaflet-map" class="leaflet-map"></div>
-                <table id="bar"><tr><td id="mZ" style="width:18px">N/A</td><td id="mQue" width="100px">&nbsp;Queue: 0&nbsp;</td><td id="mDownload" width="180px">&nbsp;Downloaded 0 (0,0kB) </td><td id='mLat' width="120px">Coords will be there</td><td id='mLon' width="120px">Coords will be there</td><td id='mLog'>Logs will be there</td></tr></table>
-                <table id='routeInfo' style="color: black; width: 350px; background-color: #5A647E; opacity: 0.8; border-style:solid; border-width: 2px; border-radius: 5px">
-            			<tr>
-            				<td style="width: 110px;">Distance run:</td>
-            				<td id='curDistance'>0 miles</td>
-                    <td style="width: 75px;">SOG: </td>
-                    <td id="SOG">0kn.</td>
-            			</tr>
-            			<tr>
-            				<td>Distance to go:</td>
-            				<td id='leaveDistance'>0 miles.</td>
-                    <td style="width: 75px;">STW: </td>
-                    <td id="STW">0kn.</td>
-            			</tr>
-            			<tr>
-            				<td>Time to go:</td>
-            				<td id='timeToGo'>0 min.</td>
-                    <td style="width: 75px;">Course: </td>
-                    <td id="Course">0º</td>
-            			</tr>
-            		</table>
+              <diw class="row g-2">
+                <div id="polygonMergeBar" class="col-2" style="display: none;">
+                  <div data-simplebar class="h-100">
+                    <div class="d-flex align-items-center p-3">
+
+                        <h5 class="m-0 me-2">Polygon merge</h5>
+
+                        <a href="javascript:hidePolygonMergeBar();" class="ms-auto">
+                            <i class="mdi mdi-close noti-icon"></i>
+                        </a>
+                    </div>
+
+                    <!-- Settings -->
+                    <hr class="m-0" />
+                      <div class="btn-group mt-4 mt-md-0" role="group" aria-label="Basic example">
+                        <button type="button" class="btn btn-soft-purple" onclick="javascript: polygonMerge();" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Merge polygons"><i class="uil uil-pathfinder-unite"></i></button>
+                        <button type="button" class="btn btn-soft-purple" onclick="javascript: polygonCross();" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Cross polygons"><i class="uil uil-pathfinder"></i></button>
+                        <button type="button" class="btn btn-soft-success" onclick="javascript: polygonSave();" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Save polygon and delete old"><i class="mdi mdi-content-save-outline"></i></button>
+                        <button type="button" class="btn btn-soft-success" onclick="javascript: polygonSaveNew();" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Save as new polygon and keep old"><i class="mdi mdi-content-save-all-outline"></i></button>
+                        <button type="button" class="btn btn-soft-purple" onclick="javascript: polygonClear();" data-bs-toggle="tooltip" data-bs-placement="top" title="" data-bs-original-title="Clear all results"><i class="uil uil-backspace"></i></button>
+                      </div>
+                    <hr class="m-0" />
+                    <div class="" id="polygonMergeList">
+
+                    </div>
+                  </div>
+                </div>
+                <div id="leaflet-map" class="leaflet-map">
+                  <table id="bar"><tr><td id="mZ" style="width:18px">N/A</td><td id="mQue" width="fit-content">&nbsp;Queue: 0&nbsp;</td><td id="mDownload" width="fit-content">&nbsp;Downloaded 0 (0,0kB) </td><td id='mLat' width="120px">Coords will be there</td><td id='mLon' width="120px">Coords will be there</td><td id='mLog'>Logs will be there</td></tr></table>
+                  <table id='routeInfo' style="color: black; width: 350px; background-color: #5A647E; opacity: 0.8; border-style:solid; border-width: 2px; border-radius: 5px">
+              			<tr>
+              				<td style="width: 110px;">Distance run:</td>
+              				<td id='curDistance'>0 miles</td>
+                      <td style="width: 75px;">SOG: </td>
+                      <td id="SOG">0kn.</td>
+              			</tr>
+              			<tr>
+              				<td>Distance to go:</td>
+              				<td id='leaveDistance'>0 miles.</td>
+                      <td style="width: 75px;">STW: </td>
+                      <td id="STW">0kn.</td>
+              			</tr>
+              			<tr>
+              				<td>Time to go:</td>
+              				<td id='timeToGo'>0 min.</td>
+                      <td style="width: 75px;">Course: </td>
+                      <td id="Course">0º</td>
+              			</tr>
+              		</table>
+                </div>
+
             </div>
             <!-- end main content-->
 
@@ -1230,7 +1260,7 @@
     <script src="assets/libs/leaflet/leaflet.gps.js"></script>
     <script src="assets/libs/leaflet/leaflet.cachedmap.layer.js"></script>
     <script src="assets/libs/leaflet/leaflet.contextmenu.js"></script>
-    <script src="tuff.js"></script>
+    <script src='turf.min.js'></script>
     <script type="text/javascript"  src="assets/libs/leaflet/Leaflet.VectorGrid.js"></script>
     <script src="assets/js/app.js"></script>
     <!-- leaflet map.init -->

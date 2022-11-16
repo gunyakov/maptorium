@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 //Init values
 //------------------------------------------------------------------------------
-let map = false;
+
 let arrMapsList = {};
 let arrLayersList = {};
 let currentMap = false;
@@ -85,6 +85,9 @@ $(document).ready(() => {
     e.relatedTarget.enableEdit();
     $("#intrumentalPanel").show();
   }
+  function bringToBack(e) {
+    e.relatedTarget.bringToBack();
+  }
   //----------------------------------------------------------------------------
   //Global polygon options
   //----------------------------------------------------------------------------
@@ -103,6 +106,16 @@ $(document).ready(() => {
       text: 'Edit',
       callback: window.editPolygon,
       iconCls: "mdi mdi-circle-edit-outline"
+    },
+    {
+      text: 'Bring to back',
+      callback: bringToBack,
+      iconCls: "mdi mdi-arrange-send-backward"
+    },
+    {
+      text: 'Add to merge bar',
+      callback: showPolygonMergeBar,
+      iconCls: "mdi mdi-checkerboard-plus"
     },
     {
       text: 'Start download job',

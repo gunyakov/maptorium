@@ -1,7 +1,7 @@
 //------------------------------------------------------------------------------
 //Canvas draw for NodeJS
 //------------------------------------------------------------------------------
-const sharp = require("sharp");
+const { createCanvas, Image } = require("canvas");
 //Set default tile size
 const width = 256;
 const height = 256;
@@ -35,13 +35,12 @@ exports.GenerateMap = async function(map, config) {
     let z = arrJobTilesGenerateList[i]['z'] + 1;
 
     //Create tile
-    const container = await sharp({
-      create: {
-        width: width,
-        height: height,
-        background: "#FFFFFF"
-      }
-    });
+    const canvas = createCanvas(width, height);
+    //Get tile draw content
+    const ctx = canvas.getContext('2d');
+    //Fill tile with white color
+    ctx.fillStyle = "rgba(255, 255, 255, 1)";
+    ctx.fillRect(0, 0, width, height);
     //Generate list of 4 tiles from lover zoom
     let tilesList = [
       {x: x, y: y, drawX: 0, drawY: 0},
@@ -56,10 +55,13 @@ exports.GenerateMap = async function(map, config) {
       //If tile exist
       if(tile && tile.s > 0) {
         //create image instance
-        let img = await sharp(tile.b);
-        await img.resize({width: width / 2, height: height / 2});
+        let img = new Image();
+        //Convert tile blob to nodejs buffer
+
+        //Create image from buffer
+        img.src = tile.b;
         //Draw lower tile to curent tile
-        await container.composite([{input: img, top: tilesList[a]['drawX'], left: tilesList[a]['drawY']}]);
+        ctx.drawImage(img, tilesList[a]['drawX'], tilesList[a]['drawY'], width / 2, height / 2);
       }
       //If tile missing
       else {
@@ -68,7 +70,7 @@ exports.GenerateMap = async function(map, config) {
       }
     }
     let newTile = {
-      data: await container.jpeg().toBuffer()
+      data: canvas.toBuffer()
     }
 
     newTile.byteLength = Buffer.byteLength(newTile.data);

@@ -53,6 +53,9 @@ L.TileGrid = L.Class.extend({
   },
   _initGrid: function() {
     if(this.options.zoom == -1 && this.options.zoomOffset == -1) {
+      if(this._gridGroupe) {
+        this._gridGroupe.remove();
+      }
       return true;
     }
     let drawZoom = this.options.zoom;
@@ -126,13 +129,13 @@ L.TileGrid = L.Class.extend({
             className: '',
             html: "<div style='width: " + scaleFactor + "px; height: " + scaleFactor + "px; display: flex; justify-content: center; align-items: center; color: " + this.options.color + "'>x&nbsp;=&nbsp;" + i + "<br>y&nbsp;=&nbsp;" + a + "</div>"
           });
-          gridGroupe.addLayer(L.marker(pointA, {icon: myIcon}));
+          gridGroupe.addLayer(L.marker(pointA, {icon: myIcon, zIndexOffset: -10}));
         }
       }
     }
     gridGroupe.addTo(this._map);
     this._gridGroupe = gridGroupe;
-    gridGroupe.setZIndex(3);
+    this._gridGroupe.bringToBack();
   },
   _update: function() {
     if(this._gridGroupe) {

@@ -2,6 +2,8 @@
 //Socket IO
 //------------------------------------------------------------------------------
 let socket = io();
+//Init values
+let map = false;
 //------------------------------------------------------------------------------
 //Additional functions
 //------------------------------------------------------------------------------
@@ -120,6 +122,104 @@ function manageJob(jobID, mode) {
     }
     else {
       alertify.error(response.message);
+    }
+  });
+}
+
+arrPolygonMergeList = [];
+polygonMergeObj = false;
+
+function projectCoords(coords) {
+  let projCoords = [];
+  for(i = 0; i < coords.length; i++) {
+    if(Array.isArray(coords[i])) {
+      coordProject = []
+      for(a = 0; a < coords[i].length; a++) {
+        coordProject.push(map.project(coords[i][a]));
+      }
+      projCoords.push(coordProject);
+    }
+    else {
+      projCoords.push(map.project(coords[i]));
+    }
+  }
+  return projCoords;
+}
+
+function showPolygonMergeBar(e) {
+  $("#polygonMergeBar").show();
+  $("#leaflet-map").addClass("col-10");
+  console.log(e.relatedTarget.getTooltip()._content);
+  $("#polygonMergeList").append(`<div class="alert alert-light" role="alert">${e.relatedTarget.getTooltip()._content}</div>`);
+  let coords = e.relatedTarget.getLatLngs();
+  coords = coords[0];
+  let normCoords = [];
+  for(let i = 0; i < coords.length; i++) {
+    normCoords.push([coords[i]['lat'], coords[i]['lng']]);
+  }
+  normCoords.push([coords[0]['lat'], coords[0]['lng']]);
+  arrPolygonMergeList.push(normCoords);
+
+}
+
+function polygonClear() {
+  if(polygonMergeObj) {
+    polygonMergeObj.remove();
+  }
+  polygonMergeObj = false;
+}
+
+function hidePolygonMergeBar() {
+  $("#polygonMergeBar").hide();
+  $("#leaflet-map").removeClass("col-10");
+  $("#polygonMergeList").html('');
+  arrPolygonMergeList = [];
+  polygonClear();
+}
+
+function polygonMerge() {
+  if(arrPolygonMergeList.length > 1) {
+    //console.log(arrPolygonMergeList[1]);
+    var poly1 = turf.polygon([arrPolygonMergeList[0]]);
+    var poly2 = turf.polygon([arrPolygonMergeList[1]]);
+
+    var union = turf.union(poly1, poly2);
+    console.log(union.geometry.coordinates[0]);
+    for(let i = 2; i < arrPolygonMergeList.length; i++) {
+      poly1 = turf.polygon([arrPolygonMergeList[i]]);
+      union = turf.union(union, poly1);
+    }
+    polygonMergeObj = L.polygon(union.geometry.coordinates, {color: 'red'}).addTo(map);
+  }
+}
+
+function polygonSaveNew() {
+  let geometry = {
+    type: "Polygon",
+    bounds: false,
+    color: "#FF0000",
+    fillColor: "#FF0000",
+    fillOpacity: 0.5,
+    coords: projectCoords(polygonMergeObj.getLatLngs()),
+    bounds: polygonMergeObj.getBounds(),
+    zoom: map.getZoom()
+  }
+  geometry.bounds._southWest = map.project(geometry.bounds._southWest);
+  geometry.bounds._northEast = map.project(geometry.bounds._northEast);
+  $.ajax({
+    url: "/marks/add",
+    dataType: "json",
+    data: {data: JSON.stringify(geometry)},
+    method: "post",
+    success: (response, code) => {
+      if(response.result) {
+        polygonMergeObj.maptoriumID = response.markID;
+        polygonMergeObj.shape = "Polygon";
+        polygonMergeObj.bindTooltip('Geometry ' + response.markID);
+      }
+      else {
+        alertify.error(response.message);
+      }
     }
   });
 }
