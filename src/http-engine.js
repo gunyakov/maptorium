@@ -26,7 +26,7 @@ exports.get = async function(url, config = require('../config.js'), responseType
         proxyOptions = `${config.proxy.protocol}://${config.proxy.auth.username}:${config.proxy.auth.password}@${config.proxy.host}:${config.proxy.port}`;
       }
       else {
-        proxyOptions = `${config.proxy.protocol}://${config.proxy.host}:${config.proxy.port}`;
+        proxyOptions = `${config.proxy.protocol}://${config.proxy.host}:${makeconfig.proxy.port}`;
       }
       switch (config.proxy.protocol) {
         case "socks":
@@ -78,7 +78,7 @@ exports.get = async function(url, config = require('../config.js'), responseType
       //Try to get urls
       axios(axiosConfig).then(async function (response) {
         //Show message
-        Log.make("info", "HTTP", axiosConfig.url);
+        Log.info("HTTP", axiosConfig.url);
         //Return data from url
         resolve(response);
       }).catch(async function (error) {
@@ -87,7 +87,7 @@ exports.get = async function(url, config = require('../config.js'), responseType
           //Show error message
           switch (error.response.status) {
             case 404:
-              Log.make("warning", "HTTP", error.response.status + " " + error.response.statusText);
+              Log.warning("HTTP", error.response.status + " " + error.response.statusText);
               resolve(404);
               break;
             case 403:
@@ -97,20 +97,20 @@ exports.get = async function(url, config = require('../config.js'), responseType
                 await TorService.reset().catch((error) => { Log.make("error", "HTTP", error) });
               }
             default:
-              Log.make("error", "HTTP", error.response.status + " " + error.response.statusText);
+              Log.error("HTTP", error.response.status + " " + error.response.statusText);
           }
         }
         else if(error.code == "ECONNREFUSED") {
-          Log.make("error", "HTTP", "Proxy Error. Connection refused.");
+          Log.error("HTTP", "Proxy Error. Connection refused.");
         }
         else if(error.code == "ECONNABORTED") {
-          Log.make("error", "HTTP", `Conection time out exceeded ${config.request.timeout}`);
+          Log.error("HTTP", `Conection time out exceeded ${config.request.timeout}`);
         }
         else if(error.code = "ECONNRESET") {
-          Log.make("error", "HTTP", 'Socket disconected before secure TLS connection was established.');
+          Log.error("HTTP", 'Socket disconected before secure TLS connection was established.');
         }
         else {
-          Log.make("error", "HTTP", error);
+          Log.error("HTTP", error);
         }
         //Return false
         resolve(false);
@@ -119,7 +119,7 @@ exports.get = async function(url, config = require('../config.js'), responseType
     //If network state is disable
     else {
       //Show error message
-      Log.make("error", "HTTP", "Network disabled " + axiosConfig.url);
+      Log.error("HTTP", "Network disabled " + axiosConfig.url);
       //Return false
       resolve(false);
     }
@@ -147,10 +147,10 @@ exports.checkProxy = async function(config) {
       }
       config.proxy.enable = true;
       if(proxyReqIP == nonProxyReqIP || !proxyReqIP) {
-        Log.make("error", "MAIN", `Proxy isn't working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
+        Log.error("MAIN", `Proxy isn't working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
       }
       else {
-        Log.make("success", "MAIN", `Proxy is working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
+        Log.success("MAIN", `Proxy is working. Real IP ${nonProxyReqIP}. Proxy IP ${proxyReqIP}`);
       }
     }
   })();

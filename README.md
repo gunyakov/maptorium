@@ -67,13 +67,13 @@ Very early version 0.9.5. Under heavy development
 
 16.08.2022 - Version 0.8.8. Middle update of job manager.
 
-09.08.2022 - Version 0.8.2. Geometry editation (change from Geoman to Leaflet.editable plugin). Storage all geometry and options for geometry in DB.
+09.08.2022 - Version 0.8.2. POI editation (change from Geoman to Leaflet.editable plugin). Storage all POI and options for POI in DB.
 
 16.07.2022 - Version 0.8.0. UI update.
 
 08.05.2022 - GPS module, GPS point on map(module write for online http server to get GPS, if you need read data from usb gps, you need rewrite gps.js to get data correcly), folder structure change, some small bugs resolving (now compatible with Windows).
 
-13.02.2022 - Basic geometry editing function (Leaflet geoman plugin). Organize DB for storing all geometry. Basic tile cached map.
+13.02.2022 - Basic POI editing function (Leaflet geoman plugin). Organize DB for storing all geometry. Basic tile cached map.
 
 01.02.2022 - Full UI remastering. Now use profesional HTML theme. Jobs list, Job status bar, Tiles Grid, etc.
 

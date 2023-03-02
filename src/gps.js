@@ -25,7 +25,7 @@ class GPS {
   //----------------------------------------------------------------------------
   async start() {
     this.enable = true;
-    Log.make("info", "GPS", "GPS service started.");
+    Log.info("GPS", "GPS service started.");
     this.service();
   }
   //----------------------------------------------------------------------------
@@ -33,7 +33,7 @@ class GPS {
   //----------------------------------------------------------------------------
   async stop() {
     this.enable = false;
-    Log.make("info", "GPS", "GPS service stoped.");
+    Log.info("GPS", "GPS service stoped.");
   }
   //----------------------------------------------------------------------------
   //Change sample rate time
@@ -41,7 +41,7 @@ class GPS {
   async sampleRate(rate = 60) {
     if(typeof rate == "number") {
       this.sampleRateTime = rate * 1000;
-      Log.make("info", "GPS", `Sample rate changed to ${rate} seconds.`);
+      Log.info("GPS", `Sample rate changed to ${rate} seconds.`);
       return true;
     }
     else {
@@ -83,9 +83,9 @@ class GPS {
         //If coords is different from last update and record enabled
         if((this.lastLng != lng || this.lastLat != lat) && this.record) {
           //Add coords to database
-          await GEOMETRY.routeAddPoint(lat, lng);
+          await POI.routeAddPoint(lat, lng);
           //Make log
-          Log.make("success", "GPS", "GPS data recorded.");
+          Log.success("GPS", "GPS data recorded.");
         }
         //Save current coords into class vars
         this.lastLat = lat;
@@ -97,7 +97,7 @@ class GPS {
         //Send data to user, if any connected
         if(IO) {
           await IO.emit("gpsData", gpsData.data);
-          Log.make("success", "GPS", "GPS send to user.");
+          Log.success("GPS", "GPS send to user.");
         }
       }
       await wait(this.sampleRateTime);
@@ -105,4 +105,4 @@ class GPS {
   }
 }
 
-module.exports = GPS;
+module.exports = new GPS();

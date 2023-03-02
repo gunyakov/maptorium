@@ -11,10 +11,15 @@ let cachedMap = false;
 //Change main map
 //------------------------------------------------------------------------------
 function changeMap(mapID) {
-  currentMap.remove();
+  if(currentMap) {
+    currentMap.remove();
+  }
   currentMap = arrMapsList[mapID];
-  currentMap.addTo(map);
-  currentMap.bringToBack();
+  if(currentMap) {
+    currentMap.addTo(map);
+    currentMap.bringToBack();
+    currentMap.ID = mapID;
+  }
 }
 //------------------------------------------------------------------------------
 //Hide all layers from map
@@ -59,7 +64,7 @@ $(document).ready(() => {
   window.deleteMark = function(e) {
     //Send to server ID of geometry
     $.ajax({
-      url: "/marks/delete",
+      url: "/poi/delete",
       data: `markID=${e.relatedTarget.maptoriumID}`,
       method: "post",
       success: (response, code) => {
@@ -297,13 +302,19 @@ $(document).ready(() => {
   //----------------------------------------------------------------------------
   //MAP: Get map center from last viewing
   //----------------------------------------------------------------------------
-  $.ajax({
-    url: "/map/center",
-    dataType: "json",
-    success: (response, code) => {
-      map.setView([response.lat, response.lng], response.zoom);
-    }
-  });
+  function getMapState() {
+    $.ajax({
+      url: "/map/state",
+      dataType: "json",
+      success: (response, code) => {
+        console.log(response);
+        map.setView([response.lat, response.lng], response.zoom);
+        changeMap(response.map);
+        hideAllLayers();
+        //addLayer(response.layer);
+      }
+    });
+  }
   //----------------------------------------------------------------------------
   //MAP: Update center coords
   //----------------------------------------------------------------------------
@@ -314,7 +325,7 @@ $(document).ready(() => {
       url: "/map/position",
       method: "post",
       dataType: "json",
-      data: `lat=${data.lat}&lng=${data.lng}&zoom=${data.zoom}`
+      data: `lat=${data.lat}&lng=${data.lng}&zoom=${data.zoom}&map=${currentMap.ID}`
     });
   });
   //------------------------------------------------------------------------------
@@ -340,7 +351,7 @@ $(document).ready(() => {
       case "t-select-tile":
         TileGrid.select(function(geometry, polygonRef) {
           $.ajax({
-            url: "/marks/add",
+            url: "/poi/add",
             dataType: "json",
             data: {data: JSON.stringify(geometry)},
             method: "post",
@@ -536,177 +547,183 @@ $(document).ready(() => {
   //------------------------------------------------------------------------------
   //Response maps list from server
   //------------------------------------------------------------------------------
-  socket.on("setMapList", (data) => {
-    $("#jobMap").html('');
-    $("#jobMapGenerate").html('');
-    arrMenuMap = [];
-    arrMenuLayer = [];
-
-    let style = {
-      rendererFactory: L.canvas.tile,
-      attribution: "",
-      subdomains: '0123',	// 01234 for openmaptiles, abcd for mapbox
-      maxNativeZoom: 20,
-      vectorTileLayerStyles: {
-        water: [],
-        landcover: [],
-        landuse: [],
-        mountain_peak: [],
-        boundary: function(properties, zoom) {
-          //console.log(properties);
-          var level = properties.admin_level;
-          let style = {
-            color: "hsl(248, 7%, 66%)",
-            fillOpacity: 0
-          }
-          if (level == 2) {
-            if(zoom > 0) style.weight = 0.6;
-            if(zoom > 4) style.weight = 1.4;
-            if(zoom > 5) style.weight = 2;
-            if(zoom > 12) style.weight = 8;
-            if(properties.maritime) style.color = "hsl(205,42%,72%)";
-          }
-          if(level == 4) {
-            if(zoom > 0) style.weight = 0;
-            if(zoom > 4) style.weight = 0.4;
-            if(zoom > 5) style.weight = 1;
-            if(zoom > 12) style.weight = 8;
-            style.dashArray = '3, 1, 1, 1';
-          }
-          return style;
-        },
-        transportation: function(properties, zoom) {
-
-          let style = {width: 1.2};
-
-          if(properties.class == 'motorway') {
-            style.color = "hsl(28,72%,69%)";
-            if(zoom > 0) style.width = 0;
-            if(zoom > 12) style.width = 1;
-            if(zoom > 13) style.width = 2;
-            if(zoom > 14) style.width = 4;
-            return style;
-          };
-          if(properties.class == 'trunk') {
+  $.ajax({
+    url: "/map/list",
+    method: "get",
+    dataType: "json",
+    success: (response, code) => {
+      $("#jobMap").html('');
+      $("#jobMapGenerate").html('');
+      arrMenuMap = [];
+      arrMenuLayer = [];
+      let data = response.list;
+      let style = {
+        rendererFactory: L.canvas.tile,
+        attribution: "",
+        subdomains: '0123',	// 01234 for openmaptiles, abcd for mapbox
+        maxNativeZoom: 20,
+        vectorTileLayerStyles: {
+          water: [],
+          landcover: [],
+          landuse: [],
+          mountain_peak: [],
+          boundary: function(properties, zoom) {
             //console.log(properties);
-            style.color = "hsl(46, 85%, 67%)";
-            if(zoom > 0) style.width = 0;
-            if(zoom > 12) style.width = 1;
-            if(zoom > 13) style.width = 2;
-            if(zoom > 14) style.width = 4;
-            return style;
-          }
-          if(properties.class == "minor") {
-            style.color = "hsl(0,0%,100%)";
-            if(zoom > 0) style.width = 0;
-            if(zoom > 12) style.width = 0.5;
-            if(zoom > 13) style.width = 1;
-            if(zoom > 14) style.width = 4;
-            return style;
-          }
-          if (zoom < 12) return [];
-          console.log(properties);
-          return [];
-        },
-        water_name: [],
-        transportation_name: [],
-        place: function(properties, zoom, coords) {
-          return [];
-          //console.log(properties);
-          if(properties.class == "town") {
-            return {icon: new L.divIcon({html: `<div>${properties.name}</div>`})};
-          }
-        },
-        waterway: [],
-        aeroway: [],
-        aerodrome_label: [],
-        globallandcover: [],
-        park: [],
-
-      }
-    }
-
-  	for(i = 0; i < data.length; i++) {
-  		let mapInfo = data[i];
-      let tileLayer = "";
-      if(mapInfo.format == "vector") {
-        //console.log(mapInfo);
-        /*tileLayer = L.vectorGrid.protobuf(`tile?map=${mapInfo.id}&z={z}&x={x}&y={y}`, style)
-  			.on('click', function(e) {	// The .on method attaches an event handler
-  				L.popup()
-  					.setContent(e.layer.properties.name || e.layer.properties.type)
-  					.setLatLng(e.latlng)
-  					.openOn(map);
-
-  				L.DomEvent.stop(e);
-  			});*/
-        tileLayer = L.mapboxGL({
-            accessToken: 'P2DGn4fI4cVJ928SF14v',
-            style: 'bright.json',
-            transformRequest: (url, resourceType) => {
-              //console.log(resourceType);
-              if(resourceType == "Tile") {
-                //console.log(url);
-                url = url.replace("https://api.maptiler.com/tiles/v3/", '');
-                url = url.split("/");
-                //console.log(url);
-                url[2] = url[2].split(".");
-                url[2] = url[2][0];
-                url = `http://${window.location.hostname}:${window.location.port}/tile?map=${mapInfo.id}&z=${url[0]}&x=${url[1]}&y=${url[2]}`;
-                //console.log(url);
-                return {
-                  url: url,
-                  credentials: 'include'  // Include cookies for cross-origin requests
-                };
-              }
+            var level = properties.admin_level;
+            let style = {
+              color: "hsl(248, 7%, 66%)",
+              fillOpacity: 0
             }
-        });
-      }
-      else {
-        tileLayer = L.tileLayer(`tile?map=${mapInfo.id}&z={z}&x={x}&y={y}`, {
-    			maxZoom: 20,
-    			attribution: mapInfo.attribution,
-    			tileSize: mapInfo.tileSize,
-    			zoomOffset: 0,
-          type: mapInfo.type,
-          mapID: mapInfo.id,
-    		});
-      }
-  		$("#jobMap").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`);
-      $("#jobMapGenerate").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`)
-  		if(mapInfo.type == "map") {
-        if(typeof arrMenuMap[mapInfo.submenu] == "undefined") {
-          arrMenuMap[mapInfo.submenu] = [];
+            if (level == 2) {
+              if(zoom > 0) style.weight = 0.6;
+              if(zoom > 4) style.weight = 1.4;
+              if(zoom > 5) style.weight = 2;
+              if(zoom > 12) style.weight = 8;
+              if(properties.maritime) style.color = "hsl(205,42%,72%)";
+            }
+            if(level == 4) {
+              if(zoom > 0) style.weight = 0;
+              if(zoom > 4) style.weight = 0.4;
+              if(zoom > 5) style.weight = 1;
+              if(zoom > 12) style.weight = 8;
+              style.dashArray = '3, 1, 1, 1';
+            }
+            return style;
+          },
+          transportation: function(properties, zoom) {
+
+            let style = {width: 1.2};
+
+            if(properties.class == 'motorway') {
+              style.color = "hsl(28,72%,69%)";
+              if(zoom > 0) style.width = 0;
+              if(zoom > 12) style.width = 1;
+              if(zoom > 13) style.width = 2;
+              if(zoom > 14) style.width = 4;
+              return style;
+            };
+            if(properties.class == 'trunk') {
+              //console.log(properties);
+              style.color = "hsl(46, 85%, 67%)";
+              if(zoom > 0) style.width = 0;
+              if(zoom > 12) style.width = 1;
+              if(zoom > 13) style.width = 2;
+              if(zoom > 14) style.width = 4;
+              return style;
+            }
+            if(properties.class == "minor") {
+              style.color = "hsl(0,0%,100%)";
+              if(zoom > 0) style.width = 0;
+              if(zoom > 12) style.width = 0.5;
+              if(zoom > 13) style.width = 1;
+              if(zoom > 14) style.width = 4;
+              return style;
+            }
+            if (zoom < 12) return [];
+            console.log(properties);
+            return [];
+          },
+          water_name: [],
+          transportation_name: [],
+          place: function(properties, zoom, coords) {
+            return [];
+            //console.log(properties);
+            if(properties.class == "town") {
+              return {icon: new L.divIcon({html: `<div>${properties.name}</div>`})};
+            }
+          },
+          waterway: [],
+          aeroway: [],
+          aerodrome_label: [],
+          globallandcover: [],
+          park: [],
+
         }
-        arrMenuMap[mapInfo.submenu].push(mapInfo);
-        arrMapsList[mapInfo.id] = tileLayer;
-  			if(!currentMap) {
-  				currentMap = tileLayer;
-  				currentMap.addTo(map);
-          currentMap.bringToBack();
-  			}
-  		}
-  		if(mapInfo.type == "layer") {
-        if(typeof arrMenuLayer[mapInfo.submenu] == "undefined") {
-          arrMenuLayer[mapInfo.submenu] = [];
+      }
+
+    	for(let i = 0; i < data.length; i++) {
+    		let mapInfo = data[i];
+        let tileLayer = "";
+        if(mapInfo.format == "vector") {
+          //console.log(mapInfo);
+          /*tileLayer = L.vectorGrid.protobuf(`tile?map=${mapInfo.id}&z={z}&x={x}&y={y}`, style)
+    			.on('click', function(e) {	// The .on method attaches an event handler
+    				L.popup()
+    					.setContent(e.layer.properties.name || e.layer.properties.type)
+    					.setLatLng(e.latlng)
+    					.openOn(map);
+
+    				L.DomEvent.stop(e);
+    			});*/
+          tileLayer = L.mapboxGL({
+              accessToken: 'P2DGn4fI4cVJ928SF14v',
+              style: 'bright.json',
+              transformRequest: (url, resourceType) => {
+                //console.log(resourceType);
+                if(resourceType == "Tile") {
+                  //console.log(url);
+                  url = url.replace("https://api.maptiler.com/tiles/v3/", '');
+                  url = url.split("/");
+                  //console.log(url);
+                  url[2] = url[2].split(".");
+                  url[2] = url[2][0];
+                  url = `http://${window.location.hostname}:${window.location.port}/tile?map=${mapInfo.id}&z=${url[0]}&x=${url[1]}&y=${url[2]}`;
+                  //console.log(url);
+                  return {
+                    url: url,
+                    credentials: 'include'  // Include cookies for cross-origin requests
+                  };
+                }
+              }
+          });
         }
-        arrMenuLayer[mapInfo.submenu].push(mapInfo);
-  			arrLayersList[mapInfo.id] = tileLayer;
-  			if(!currentLayer && mapInfo.format == "vector") {
-  				currentLayer = tileLayer;
-  				currentLayer.addTo(map);
-          currentLayer.bringToFront();
-          if(currentMap) {
-            currentMap.bringToBack();
+        else {
+          tileLayer = L.tileLayer(`tile?map=${mapInfo.id}&z={z}&x={x}&y={y}`, {
+      			maxZoom: 20,
+      			attribution: mapInfo.attribution,
+      			tileSize: mapInfo.tileSize,
+      			zoomOffset: 0,
+            type: mapInfo.type,
+            mapID: mapInfo.id,
+      		});
+        }
+    		$("#jobMap").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`);
+        $("#jobMapGenerate").append(`<option value="${mapInfo.id}">${mapInfo.name}</option>`)
+    		if(mapInfo.type == "map") {
+          if(typeof arrMenuMap[mapInfo.submenu] == "undefined") {
+            arrMenuMap[mapInfo.submenu] = [];
           }
-  			}
-  		}
-  	}
+          arrMenuMap[mapInfo.submenu].push(mapInfo);
+          arrMapsList[mapInfo.id] = tileLayer;
+    			if(!currentMap) {
+    				currentMap = tileLayer;
+    				currentMap.addTo(map);
+            currentMap.bringToBack();
+            currentMap.ID = mapInfo.id;
+    			}
+    		}
+    		if(mapInfo.type == "layer") {
+          if(typeof arrMenuLayer[mapInfo.submenu] == "undefined") {
+            arrMenuLayer[mapInfo.submenu] = [];
+          }
+          arrMenuLayer[mapInfo.submenu].push(mapInfo);
+    			arrLayersList[mapInfo.id] = tileLayer;
+    			if(!currentLayer && mapInfo.format == "vector") {
+    				currentLayer = tileLayer;
+    				currentLayer.addTo(map);
+            currentLayer.bringToFront();
+            if(currentMap) {
+              currentMap.bringToBack();
+            }
+    			}
+    		}
+    	}
 
-    $("#maps-list").html(generateHTMLMenu(arrMenuMap));
-    $("#layers-list").html(generateHTMLMenu(arrMenuLayer, "layer"));
-
-    CachedMap.bringToFront();
+      $("#maps-list").html(generateHTMLMenu(arrMenuMap));
+      $("#layers-list").html(generateHTMLMenu(arrMenuLayer, "layer"));
+      getMapState();
+      CachedMap.bringToFront();
+    }
   });
   //------------------------------------------------------------------------------
   //Generate specific HTML for current theme to show menu
@@ -887,7 +904,7 @@ $(document).ready(() => {
       geometry.zoom = map.getZoom();
 
       //Send data to server
-      $.jsonPost("/marks/update", geometry, (response, code) => {
+      $.jsonPost("/poi/update", geometry, (response, code) => {
         if(response.result) {
           alertify.success(response.message);
         }

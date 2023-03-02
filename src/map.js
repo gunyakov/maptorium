@@ -9,18 +9,8 @@ var moment = require('moment');
 //------------------------------------------------------------------------------
 //DB handler
 //------------------------------------------------------------------------------
-const DB = require("./db.js");
+const DB = require("../DB/db.js");
 const db = new DB();
-
-const reqtiles = pm2.meter({
-  name: 'req/sec',
-  id: 'app/requests/tiles'
-})
-
-const proctiles = pm2.meter({
-  name: 'tiles/sec',
-  id: 'app/process/tiles'
-})
 //------------------------------------------------------------------------------
 //General map handler
 //------------------------------------------------------------------------------
@@ -64,7 +54,7 @@ class Map {
 
     //Chech if tile exist in DB
     tile = await this.checkTile(z, x, y, mode.getFull);
-    proctiles.mark();
+    //proctiles.mark();
     //If disable get tiles from internet return any result
     if(mode.mode == "disable") return tile;
 
@@ -122,7 +112,7 @@ class Map {
       await wait(this.config.request.delay);
       //Try to get tile from server
       netTile = await this._httpEngine.get(url, this.config, "arraybuffer");
-      reqtiles.mark();
+      //reqtiles.mark();
     }
     //--------------------------------------------------------------------------
     //If tile image received from internet

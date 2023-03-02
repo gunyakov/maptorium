@@ -85,9 +85,15 @@ let config = {
       error: true,
       warning: true
     },
-    GEOMETRY: {
+    POI: {
       success: true,
       info: false,
+      error: true,
+      warning: true
+    },
+    WORKER: {
+      success: true,
+      info: true,
       error: true,
       warning: true
     }

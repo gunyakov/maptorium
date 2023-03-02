@@ -14,7 +14,6 @@ const CRC32 = require("crc-32");
 //Sqlite3 Promise wrapper
 //------------------------------------------------------------------------------
 let sqlite3 = require('./sqlite3-promise.js');
-sqlite3 = new sqlite3();
 //------------------------------------------------------------------------------
 //DB handler for tile storage based on sqlite3 promise version
 //------------------------------------------------------------------------------
@@ -24,8 +23,6 @@ class DB {
   //----------------------------------------------------------------------------
   constructor() {
     this.arrDB = {};
-    this.dbOpened = 0;
-    this.service();
   }
   //----------------------------------------------------------------------------
   //Function to generate full folder path to DB file
@@ -85,10 +82,10 @@ class DB {
         dbState = await sqlite3.open(dbName);
         if(dbState) {
           //Create table to store tiles
-          await sqlite3.run(dbName, "CREATE TABLE IF NOT EXISTS t (x INTEGER NOT NULL,y INTEGER NOT NULL,v INTEGER DEFAULT 0 NOT NULL,c TEXT,s INTEGER DEFAULT 0 NOT NULL,h INTEGER DEFAULT 0 NOT NULL,d INTEGER NOT NULL,b BLOB,constraint PK_TB primary key (x,y,v));");
+          await sqlite3.run(dbName, "CREATE_STORAGE_TABLE");
           //Create index for tiles table
-          await sqlite3.run(dbName, "CREATE INDEX IF NOT EXISTS t_v_idx on t (v)");
-          Log.make("info", "DB", "CREATE -> " + dbName);
+          await sqlite3.run(dbName, "CREATE_INDEX");
+          Log.info("DB", "CREATE -> " + dbName);
         }
       }
       //If DB file is present
@@ -98,7 +95,7 @@ class DB {
         //If we open DB successfully
         if(dbState) {
           //Make log
-          Log.make("info", "DB", "OPEN -> " + dbName);
+          Log.info("DB", "OPEN-> " + dbName);
         }
       }
       //If DB file opened/created successfully
@@ -128,7 +125,7 @@ class DB {
     //Try to get DB
     await this.getDB(z, x, y, storage);
     //SQL request to DB
-    let sql = getFull ? "SELECT s, b, d, h, v FROM t WHERE x = ? AND y = ?;" : "SELECT s, d, h, v FROM t WHERE x = ? AND y = ?;";
+    let sql = getFull ? "SELECT_TILE_FULL" : "SELECT_TILE_INFO";
     //Request tile from DB
     let results = await sqlite3.all(dbName, sql, [x, y]);
     //If request to DB is finished
@@ -145,7 +142,7 @@ class DB {
     //If request return undefined state
     else {
       //Make log
-      Log.make("error", "DB", "request problem in " + dbName);
+      Log.error("DB", "request problem in " + dbName);
       //Set DB open mode to force
       return false;
     }
@@ -163,7 +160,7 @@ class DB {
       //Получаем время запроса
       let timeStamp = await this.time();
       //Заносим изображение в базу
-      let results = await sqlite3.run(dbName, "INSERT INTO t VALUES (?, ?, ?, ?, ?, ?, ?, ?);", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]);
+      let results = await sqlite3.run(dbName, "INSERT_TILE", [x, y, mapVersion, "", parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob]);
       //Если запрос вернул результат
       if(results) {
         return true;
@@ -196,11 +193,11 @@ class DB {
     //If tile present in DB
     if(tile !== false) {
       //Update tile in DB
-      results = await sqlite3.run(dbName, "UPDATE t SET v = ?, s = ?, h = ?, d = ?, b = ? WHERE x = ? AND y = ?;", [mapVersion, parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob, x, y]);
+      results = await sqlite3.run(dbName, "UPDATE_TILE", [mapVersion, parseInt(size), Math.abs(CRC32.bstr(new Buffer.from( blob, 'binary' ).toString('utf8'))), timeStamp, blob, x, y]);
       //If request to DB return true state
       if(results) {
         //Make log
-        Log.make("success", "DB", "UPDATE -> " + dbName);
+        Log.success("DB", "UPDATE -> " + dbName);
         //Return
         return true;
       }
@@ -213,7 +210,7 @@ class DB {
     //If request to DB return false state
     if(results === false) {
       //Make log
-      Log.make("error", "DB", "UPDATE -> " + dbName);
+      Log.error("DB", "UPDATE -> " + dbName);
       //Return error
       return false;
     }
@@ -221,46 +218,6 @@ class DB {
     else {
       return true;
     }
-  }
-  //----------------------------------------------------------------------------
-  //Service function to close DB file when reach iddle time out
-  //----------------------------------------------------------------------------
-  async service() {
-    //Run neverended cycle
-    while(true) {
-      //Go throught DB list
-      for (let [key, value] of Object.entries(this.arrDB)) {
-        //Check last DB query time
-        let dbTimeOpen = Math.floor(Date.now() / 1000) - value.time;
-        //If last query time more then iddle time settings
-        if(dbTimeOpen > config.db.OpenTime && this.arrDB[key]['state'] == "open") {
-          //Close DB
-          let result = await sqlite3.close(value.name);
-          //If DB closed
-          if(result) {
-            //Make log
-            Log.make("info", "DB", "CLOSE -> " + value.name);
-          }
-          //If some error during closing DB
-          else {
-            //Make log
-            Log.make("error", "DB", "CLOSE -> " + value.name);
-          }
-          //Set DB close state
-          this.arrDB[key]['state'] = "closed";
-          //Decrease DB counter
-          this.dbOpened--;
-        }
-      }
-      //Run function each 5 seconds
-      await wait(5000);
-    }
-  }
-  //----------------------------------------------------------------------------
-  //Return counter of opened DB
-  //----------------------------------------------------------------------------
-  async getDBCounter() {
-    return this.dbOpened;
   }
   //----------------------------------------------------------------------------
   //UNIX TIMESTAMP

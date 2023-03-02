@@ -4,15 +4,12 @@ const crypto = require("crypto");
 
 router.use(express.json());
 router.use(express.urlencoded({ extended: true }));
-
-//const {arrayMoveImmutable} = import('array-move');
-//import {arrayMoveImmutable} from 'array-move';
-let arrayFunc = require("array-move");
 //------------------------------------------------------------------------------
 //HTTP Server: Request to get jobs list
 //------------------------------------------------------------------------------
 router.post("/list", async function(req, res) {
-  res.json({result: true, list: arrJobList});
+  let jobList = await Downloader.getJobsList();
+  res.json({result: true, list: jobList});
 });
 //------------------------------------------------------------------------------
 //HTTP Server: Request to download job
@@ -24,8 +21,8 @@ router.post("/add", async function(req, res){
   jobConfig.running = false;
   jobConfig.mode = config.network.state;
   jobConfig.ID = crypto.randomBytes(16).toString("hex");
-  arrJobList.push(jobConfig);
-  res.json({result: true, list: arrJobList});
+  let jobList = await Downloader.addJob(jobConfig);
+  res.json({result: true, list: jobList});
 });
 //------------------------------------------------------------------------------
 //HTTP Server: Request to generate map job
@@ -41,34 +38,19 @@ router.post("/generate", async function(req, res){
 
 router.post("/manage", async (req, res) => {
   let data = JSON.parse(req.body.data);
+  let jobsList = [];
   switch (data.mode) {
     case "delete":
-      for(let i = 0; i < arrJobList.length; i++) {
-        if(arrJobList[i]['ID'] == data.ID) {
-          arrJobList.splice(i, 1);
-          break;
-        }
-      }
-      if(currentJob.ID == data.ID) {
-        arrJobTilesList = [];
-      }
-      res.json({result: true,message: "Job was deleted from list.", list: arrJobList});
+      jobsList = await Downloader.jobDelete(data.ID);
+      res.json({result: true, message: "Job was deleted from list.", list: jobsList});
       break;
     case "up":
-      for(let i = 0; i < arrJobList.length; i++) {
-        if(arrJobList[i]['ID'] == data.ID) {
-          arrJobList = arrayFunc.arrayMoveImmutable(arrJobList, i, i - 1);
-        }
-      }
-      res.json({result: true,message: "Job was moved up.", list: arrJobList});
+      jobsList = await Downloader.jobUP(data.ID);
+      res.json({result: true,message: "Job was moved up.", list: jobsList});
       break;
     case "down":
-      for(let i = 0; i < arrJobList.length; i++) {
-        if(arrJobList[i]['ID'] == data.ID) {
-          arrJobList = arrayFunc.arrayMoveImmutable(arrJobList, i, i + 1);
-        }
-      }
-      res.json({result: true,message: "Job was moved down.", list: arrJobList});
+      jobsList = await Downloader.jobDown(data.ID);
+      res.json({result: true,message: "Job was moved down.", list: jobsList});
       break;
     default:
       res.json({result: false, message: "Manage mode for job is wrong."});

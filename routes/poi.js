@@ -7,7 +7,7 @@ router.use(express.urlencoded({ extended: true }));
 //MARKS: Get category list
 //------------------------------------------------------------------------------
 router.get('/category', async (req, res) => {
-  let categoryList = await GEOMETRY.categoryList();
+  let categoryList = await POI.categoryList();
   if(categoryList) {
     categoryList['result'] = true;
     res.json({result: true, list: categoryList});
@@ -20,7 +20,7 @@ router.get('/category', async (req, res) => {
 //MARKS: Add category to DB
 //------------------------------------------------------------------------------
 router.post("/category/add", async (req, res) => {
-  let result = await GEOMETRY.categoryAdd(req.body.name, req.body.parentID);
+  let result = await POI.categoryAdd(req.body.name, req.body.parentID);
   if(result) {
     res.json({result: true, message: "Category was inserted in DB."});
   }
@@ -32,7 +32,7 @@ router.post("/category/add", async (req, res) => {
 //MARKS: Get info about mark
 //------------------------------------------------------------------------------
 router.get('/info/:markID', async (req, res) => {
-  let marks = await GEOMETRY.get(req.params.markID);
+  let marks = await POI.get(req.params.markID);
   if(marks) {
     marks = marks[0];
     marks.result = true;
@@ -50,10 +50,10 @@ router.post('/update', async (req, res) => {
   //console.log(data);
   let result = false;
   if(data.update) {
-    result = await GEOMETRY.update(data);
+    result = await POI.update(data);
   }
   else {
-    result = await GEOMETRY.update(data, true);
+    result = await POI.update(data, true);
   }
   if (result) {
     res.json({result: true, message: "Mark was updated."});
@@ -66,9 +66,9 @@ router.post('/update', async (req, res) => {
 //MARKS: Get marks list of specific category
 //------------------------------------------------------------------------------
 router.get('/list/:categoryID', async (req, res) => {
-  let geometry = await GEOMETRY.get(0, req.params.categoryID);
-  if(geometry) {
-    res.json({result: true, list: geometry});
+  let poi = await POI.get(0, req.params.categoryID);
+  if(poi) {
+    res.json({result: true, list: poi});
   }
   else {
     res.json({result: false, message: "Category is empty."});
@@ -78,9 +78,9 @@ router.get('/list/:categoryID', async (req, res) => {
 //MARKS: Get full marks list
 //------------------------------------------------------------------------------
 router.get('/', async (req, res) => {
-  let geometry = await GEOMETRY.get();
-  if(geometry) {
-    res.json({result: true, list: geometry});
+  let poi = await POI.get();
+  if(poi) {
+    res.json({result: true, list: poi});
   }
   else {
     res.json({result: false, message: "Category is empty."});
@@ -90,7 +90,7 @@ router.get('/', async (req, res) => {
 //MARKS: Delete from DB
 //------------------------------------------------------------------------------
 router.post('/delete', async (req, res) => {
-  await GEOMETRY.delete(req.body.markID);
+  await POI.delete(req.body.markID);
   res.json({result: true, message: "Mark was deleted from map."});
 });
 //------------------------------------------------------------------------------
@@ -99,7 +99,7 @@ router.post('/delete', async (req, res) => {
 router.post("/add", async (req, res) => {
   if(req.body.data) {
     let data = JSON.parse(req.body.data);
-    let result = await GEOMETRY.save(data);
+    let result = await POI.save(data);
     if(result) {
       res.json({result: true, markID: result});
     }

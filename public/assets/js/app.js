@@ -207,7 +207,7 @@ function polygonSaveNew() {
   geometry.bounds._southWest = map.project(geometry.bounds._southWest);
   geometry.bounds._northEast = map.project(geometry.bounds._northEast);
   $.ajax({
-    url: "/marks/add",
+    url: "/poi/add",
     dataType: "json",
     data: {data: JSON.stringify(geometry)},
     method: "post",
@@ -504,7 +504,7 @@ $(document).ready(() => {
       function updateCategoryList() {
         return new Promise(function(resolve, reject) {
           $.ajax({
-            url: "/marks/category",
+            url: "/poi/category",
             dataType: "json",
             success: (responce, code) => {
               if (responce.result) {
@@ -517,7 +517,7 @@ $(document).ready(() => {
                   event.stopPropagation();
                   let reqCatID = $(event.target).attr("categoryid");
                   $.ajax({
-                    url: "/marks/list/" + reqCatID,
+                    url: "/poi/list/" + reqCatID,
                     dataType: "json",
                     success: (responce, code) => {
                       if(responce.result) {
@@ -580,7 +580,7 @@ $(document).ready(() => {
 
       $("#formCategorySave").on("click", () => {
         let data = $("#formAddCategory").serialize();
-        $.jsonPost("/marks/category/add", data, async (response, code) => {
+        $.jsonPost("/poi/category/add", data, async (response, code) => {
           if(responce.result == true) {
             alertify.success(response.message);
             await updateCategoryList();
@@ -607,7 +607,7 @@ $(document).ready(() => {
       function getMarkInfo(markID = 0) {
         return new Promise(function(resolve, reject) {
           $.ajax({
-            url: "/marks/info/" + markID,
+            url: "/poi/info/" + markID,
             dataType: "json",
             success: (response, code) => {
               $(`#marksCategoryList2 option[value=${response.categoryID}]`).attr('selected','selected');
@@ -665,7 +665,7 @@ $(document).ready(() => {
         data.color = color;
         data.update = true;
         $.ajax({
-          url: "/marks/update",
+          url: "/poi/update",
           data: {data: JSON.stringify(data)},
           dataType: "json",
           method: "post",

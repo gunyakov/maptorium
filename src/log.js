@@ -44,20 +44,24 @@ class Log {
       if(type == "info") {
         console.log(colors.blue(new Date().toLocaleString("en-GB")), colors.blue.bold(type.toUpperCase()), colors.blue.bold(module.toUpperCase()), colors.blue(message));
       }
-      //Call callback, if registered
-      if(IO) {
-        let logData = {
-          type: type,
-          module: module,
-          message: message
-        }
-        IO.emit("log", logData);
-      }
     }
   }
-  //Return log list
-  async get() {
-    return this.arrLog;
+
+  async error(module, message) {
+    this.make('error', module, message);
   }
+
+  async warning(module, message) {
+    this.make("warning", module, message);
+  }
+
+  async success(module, message) {
+    this.make("success", module, message);
+  }
+
+  async info(module, message) {
+    this.make("info", module, message);
+  }
+
 }
-module.exports = Log;
+module.exports = new Log();

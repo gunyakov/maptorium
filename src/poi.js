@@ -1,23 +1,18 @@
 //------------------------------------------------------------------------------
 //DB handler
 //------------------------------------------------------------------------------
-let sqlite3 = require('./sqlite3-promise.js');
-sqlite3 = new sqlite3();
+let sqlite3 = require('../DB/sqlite3-promise.js');
 //------------------------------------------------------------------------------
 //Checker tiles inside polygon or not
 //------------------------------------------------------------------------------
 let pointInPolygon = require('point-in-polygon');
-
-
-var turf = require('@turf/turf');
-let union = require('@turf/union');
 //------------------------------------------------------------------------------
-//General geometry storage
+//General POI storage
 //------------------------------------------------------------------------------
-class Geometry {
+class POI {
 
   constructor(){
-    this._dbName = process.mainModule.path + "/Marks.db3";
+    this._dbName = process.mainModule.path + "/POI.db3";
     this.time = Math.floor(Date.now() / 1000);
     this.state = "close";
     this.routeID = false;
@@ -36,7 +31,7 @@ class Geometry {
       await sqlite3.open(this._dbName);
       this.state = "open";
       //Make log
-      Log.make("info", "DB", "OPEN -> " + this._dbName);
+      Log.info("DB", "OPEN -> " + this._dbName);
     }
     return;
   }
@@ -45,28 +40,28 @@ class Geometry {
     await this.open();
     let result = false;
     if(ID == 0 && categoryID == 0) {
-      result = await sqlite3.all(this._dbName, "SELECT * FROM geometry;", []);
+      result = await sqlite3.all(this._dbName, "SELECT_ALL_POI", []);
     }
     else {
       if(ID > 0 && categoryID == 0) {
-        result = await sqlite3.all(this._dbName, "SELECT * FROM geometry WHERE ID = ?;", [ID]);
+        result = await sqlite3.all(this._dbName, "SELECT_POI_BY_ID", [ID]);
       }
       if(ID == 0 && categoryID > 0) {
-        result = await sqlite3.all(this._dbName, "SELECT * FROM geometry WHERE categoryID = ?;", [categoryID]);
+        result = await sqlite3.all(this._dbName, "SELECT_POI_BY_CATEGORY", [categoryID]);
       }
       if(ID > 0 && categoryID > 0) {
-        result = await sqlite3.all(this._dbName, "SELECT * FROM geometry WHERE ID = ? AND categoryID = ?;", [ID, categoryID]);
+        result = await sqlite3.all(this._dbName, "SELECT_POI_BY_BOTH", [ID, categoryID]);
       }
     }
     if(result.length > 0) {
       let points = false;
       let responce = [];
-      for(i = 0; i < result.length; i++) {
-        points = await sqlite3.all(this._dbName, "SELECT * FROM points WHERE geometryID = ?;", [result[i]['ID']]);
+      for(let i = 0; i < result.length; i++) {
+        points = await sqlite3.all(this._dbName, "SELECT_POINTS_BY_POI", [result[i]['ID']]);
         if(points && points.length > 0) {
-          let geometry = result[i];
-          geometry.points = points;
-          responce.push(geometry);
+          let poi = result[i];
+          poi.points = points;
+          responce.push(poi);
         }
       }
       return responce;
@@ -76,21 +71,21 @@ class Geometry {
     }
   }
 
-  async save(geometry) {
-    await this.open();
-    let SQL = "INSERT INTO geometry('categoryID', 'name', 'type', 'color', 'fillColor', 'fillOpacity', 'zoom', 'SWx', 'SWy', 'NEx', 'NEy') VALUES(1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
-    let SQLValues = ['', geometry.type, geometry.color, geometry.fillColor, geometry.fillOpacity, geometry.zoom, 0, 0, 0, 0];
+  async save(poi) {
 
-    await sqlite3.run(this._dbName, SQL, SQLValues);
-    let lastID = await sqlite3.get(this._dbName, "SELECT * FROM geometry WHERE name = ? ORDER BY ID DESC LIMIT 1;", ['']);
-    if(typeof lastID !== "undefined") {
-      if(geometry.bounds) {
-        SQL = "UPDATE geometry SET SWx = ?, SWy = ?, NEx = ?, NEy = ? WHERE ID = ?;";
-        SQLValues = [geometry.bounds._southWest.x, geometry.bounds._southWest.y, geometry.bounds._northEast.x, geometry.bounds._northEast.y, lastID.ID];
-        await sqlite3.run(this._dbName, SQL, SQLValues);
+    await this.open();
+
+    let SQLValues = ['', poi.type, poi.color, poi.fillColor, poi.fillOpacity, poi.zoom, 0, 0, 0, 0];
+
+    let lastID = await sqlite3.run(this._dbName, "INSERT_POI", SQLValues);
+
+    if(lastID > 0) {
+      if(poi.bounds) {
+        SQLValues = [poi.bounds._southWest.x, poi.bounds._southWest.y, poi.bounds._northEast.x, poi.bounds._northEast.y, lastID];
+        await sqlite3.run(this._dbName, "UPDATE_POI", SQLValues);
       }
-      await this.savePoints(lastID.ID, geometry.type, geometry.coords);
-      return lastID.ID;
+      await this.savePoints(lastID, poi.type, poi.coords);
+      return lastID;
     }
     else {
       return false;
@@ -103,12 +98,12 @@ class Geometry {
       case "Polygon":
         coords = coords[0];
       case "Line":
-        for(i = 0; i < coords.length; i++) {
-          result = await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, Math.round(coords[i]['x']), Math.round(coords[i]['y'])]);
+        for(let i = 0; i < coords.length; i++) {
+          result = await sqlite3.run(this._dbName, "INSERT_POINTS", [ID, Math.round(coords[i]['x']), Math.round(coords[i]['y'])]);
         }
         break;
       case "Marker":
-        result = await sqlite3.run(this._dbName, "INSERT INTO points('geometryID', 'x', 'y') VALUES (?, ?, ?);", [ID, Math.round(coords['x']), Math.round(coords['y'])]);
+        result = await sqlite3.run(this._dbName, "INSERT_POINTS", [ID, Math.round(coords['x']), Math.round(coords['y'])]);
         break;
     }
     return result;
@@ -117,40 +112,36 @@ class Geometry {
   async delete(ID, onlyPoints = false) {
     //Open DB (if not yet opened)
     await this.open();
-    //If not update of geometry
+    //If not update of POI
     if(!onlyPoints) {
-      //Delete entry of geometry
-      await sqlite3.run(this._dbName, "DELETE FROM geometry WHERE ID = ?;", [ID]);
+      //Delete entry of POI
+      await sqlite3.run(this._dbName, "DELETE_POI_BY_ID", [ID]);
     }
-    //Delete points of geometry
-    await sqlite3.run(this._dbName, "DELETE FROM points WHERE geometryID = ?;", [ID]);
+    //Delete points of POI
+    await sqlite3.run(this._dbName, "DELETE_POINTS_BY_POI", [ID]);
     //Exit
     return;
   }
   //----------------------------------------------------------------------------
-  //Update geometry style/info/points in DB
+  //Update POI style/info/points in DB
   //----------------------------------------------------------------------------
   async update(data, onlyPoints = false) {
     //Open DB (if not yet opened)
     await this.open();
-    let SQL = "";
     let SQLValues = [];
     let result = true;
     if(!onlyPoints) {
-      //Update style of geometry
-      SQL = "UPDATE geometry SET categoryID = ?, name = ?, width = ?, fillOpacity = ?, color = ?, fillColor = ? WHERE ID = ?;";
+      //Update style of POI
       SQLValues = [data.categoryID, data.name, data.width, data.fillOpacity, data.color, data.fillColor, parseInt(data.markID)];
-      result = await sqlite3.run(this._dbName, SQL, SQLValues);
+      result = await sqlite3.run(this._dbName, "UPDATE_POI_STYLE", SQLValues);
     }
-    //Update bounds of geometry if present
+    //Update bounds of POI if present
     if(data.bounds) {
-      SQL = "UPDATE geometry SET SWx = ?, SWy = ?, NEx = ?, NEy = ?, zoom = ? WHERE ID = ?;";
       SQLValues = [Math.round(data.bounds._southWest.x), Math.round(data.bounds._southWest.y), Math.round(data.bounds._northEast.x), Math.round(data.bounds._northEast.y), data.zoom, data.markID];
-      result = await sqlite3.run(this._dbName, SQL, SQLValues);
+      result = await sqlite3.run(this._dbName, "UPDATE_POI_BOUNDS", SQLValues);
     }
     if(data.coords) {
-      SQL = "DELETE FROM points WHERE geometryID = ?;";
-      await sqlite3.run(this._dbName, SQL, [data.markID]);
+      await sqlite3.run(this._dbName, "DELETE_POINTS_BY_POI", [data.markID]);
       result = await this.savePoints(data.markID, data.type, data.coords);
     }
     //Exit
@@ -162,8 +153,7 @@ class Geometry {
   async categoryList() {
     //Open DB (if not yet opened)
     await this.open();
-    let SQL = "SELECT * FROM category;";
-    let categoryList = await sqlite3.all(this._dbName, SQL);
+    let categoryList = await sqlite3.all(this._dbName, "SELECT_CATEGORY_LIST");
     if(categoryList) {
       return categoryList;
     }
@@ -180,8 +170,7 @@ class Geometry {
     let SQL = "";
     //Check if parentID category in DB
     if (parentID) {
-      SQL = "SELECT * FROM category WHERE ID = ?;";
-      let categoryList = await sqlite3.all(this._dbName, SQL, [parentID]);
+      let categoryList = await sqlite3.all(this._dbName, "SELECT_CATEGORY_BY_ID", [parentID]);
       if (!categoryList) {
         return false;
       }
@@ -189,10 +178,9 @@ class Geometry {
     else {
       parentID = 0;
     }
-    SQL = "INSERT INTO category('name', 'parentID') VALUES(?, ?);";
-    let result = await sqlite3.run(this._dbName, SQL, [name, parentID]);
+    let result = await sqlite3.run(this._dbName, "INSERT_CATEGORY", [name, parentID]);
     if(result) {
-      Log.make("info", "DB", "INSERT -> " + this._dbName);
+      Log.info("POI", "INSERT -> " + this._dbName);
       return true;
     }
     else {
@@ -203,28 +191,26 @@ class Geometry {
   async routeAddRoute(name = "New Route") {
     //Open DB (if not yet opened)
     await this.open();
-    let SQL = "INSERT INTO routeList('name', 'distance') VALUES(?, ?);";
-    await sqlite3.run(this._dbName, SQL, [name, 0]);
+    await sqlite3.run(this._dbName, "INSERT_ROUTE", [name, 0]);
     await this.routeGetID();
-    Log.make("info", "DB", "INSERT -> " + this._dbName);
+    Log.info("POI", "INSERT -> " + this._dbName);
     return true;
   }
 
   async routeAddPoint(lat, lng) {
     if(lat != 0 && lng != 0) {
       if(this.routeID) {
-        let SQL = "INSERT INTO routeCoords('routeID', 'lat', 'lon', 'date') VALUES(?, ?, ?, 'unixepoch')";
         //Open DB (if not yet opened)
         await this.open();
-        await sqlite3.run(this._dbName, SQL, [this.routeID, lat, lng]);
-        Log.make("info", "DB", "INSERT -> " + this._dbName);
+        await sqlite3.run(this._dbName, "INSERT_ROUTE_POINT", [this.routeID, lat, lng]);
+        Log.info("POI", "INSERT -> " + this._dbName);
       }
       else {
-        Log.make("warning", "GEOMETRY", "RouteID is still empty. Skip adding route point ot DB.");
+        Log.warning("POI", "RouteID is still empty. Skip adding route point ot DB.");
       }
     }
     else {
-      Log.make("warning", "GEOMETRY", "One of coords is empty. Skip adding route point ot DB.");
+      Log.warning("POI", "One of coords is empty. Skip adding route point ot DB.");
     }
   }
 
@@ -238,7 +224,7 @@ class Geometry {
       routeID = ID;
     }
     //Exex SQL request
-    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeCoords WHERE routeID=? ORDER BY ID;", [routeID]);
+    let result = await sqlite3.all(this._dbName, "SELECT_ROUTE_POINTS", [routeID]);
     //If have point for route in DB
     if(result.length > 0) {
       //Form data
@@ -259,14 +245,14 @@ class Geometry {
   async routeGetID() {
     //Get last route ID in DB
     await this.open();
-    let result = await sqlite3.all(this._dbName, "SELECT MAX(ID) as IDMAX FROM routeList;");
+    let result = await sqlite3.all(this._dbName, "SELECT_LAST_ROUTE");
     if(result.length > 0) {
       if(this.routeID < result[0]['IDMAX']) {
         this.routeID = result[0]['IDMAX'];
-        Log.make("success", "GEOMETRY", `RouteID was set to ${this.routeID}.`);
+        Log.success("POI", `RouteID was set to ${this.routeID}.`);
       }
       else {
-        Log.make("error", "GEOMETRY", "Cant find new route ID in DB.");
+        Log.warning("POI", "Cant find new route ID in DB.");
       }
     }
   }
@@ -274,7 +260,7 @@ class Geometry {
   async routeGetList() {
     await this.open();
     //Get routes list from DB
-    let result = await sqlite3.all(this._dbName, "SELECT * FROM routeList;");
+    let result = await sqlite3.all(this._dbName, "SELECT_ALL_ROUTES");
     //If have route list in DB
     if(result.length > 0) {
       //Return
@@ -295,7 +281,7 @@ class Geometry {
       let dbTimeOpen = Math.floor(Date.now() / 1000) - this.time;
       if(dbTimeOpen > config.db.OpenTime && this.state == "open") {
         await sqlite3.close(this._dbName);
-        Log.make("info", "DB", "CLOSE -> " + this._dbName);
+        Log.info("DB", "CLOSE -> " + this._dbName);
         this.state = "close";
       }
       //Run every 5 seconds
@@ -306,32 +292,32 @@ class Geometry {
   //Generate tiles list for job list
   //----------------------------------------------------------------------------
   async tileList(ID, requiredZoom, map = "google") {
-    Log.make('success', "MAIN", `Start calculation tiles list for Polygon ${ID} and Zoom ${requiredZoom}`);
-    let geometry = await this.get(parseInt(ID));
-    if(geometry) {
-      geometry = geometry[0];
-      if(geometry.type == "Polygon") {
+    Log.success("MAIN", `Start calculation tiles list for Polygon ${ID} and Zoom ${requiredZoom}`);
+    let poi = await this.get(parseInt(ID));
+    if(poi) {
+      poi = poi[0];
+      if(poi.type == "Polygon") {
         let arrJobTilesList = [];
-        let zoom = geometry.zoom;
+        let zoom = poi.zoom;
         let scaleFactor = requiredZoom - zoom;
         if(requiredZoom - zoom >= 0) {
           scaleFactor = Math.pow(2, scaleFactor);
         }
         else {
-          Log.make('warning', "MAIN", "Abort tiles calculation. Required Zoom is same as selected zoom.");
+          Log.warning("MAIN", "Abort tiles calculation. Required Zoom is same as selected zoom.");
           return false;
         }
         //Init empty polygon coords list
         let polygon = [];
         //For all points in polygon
-        for(i = 0; i < geometry.points.length; i++) {
+        for(let i = 0; i < poi.points.length; i++) {
           //Form polygon array
-          polygon.push([Math.round(geometry.points[i]['x'] * scaleFactor), Math.round(geometry.points[i]['y'] * scaleFactor)]);
+          polygon.push([Math.round(poi.points[i]['x'] * scaleFactor), Math.round(poi.points[i]['y'] * scaleFactor)]);
         }
-        var startX = Math.floor(geometry.SWx * scaleFactor / 256);
-      	var startY = Math.floor(geometry.NEy * scaleFactor / 256);
-      	var stopX = Math.ceil(geometry.NEx * scaleFactor / 256);
-      	var stopY = Math.ceil(geometry.SWy * scaleFactor / 256);
+        var startX = Math.floor(poi.SWx * scaleFactor / 256);
+      	var startY = Math.floor(poi.NEy * scaleFactor / 256);
+      	var stopX = Math.ceil(poi.NEx * scaleFactor / 256);
+      	var stopY = Math.ceil(poi.SWy * scaleFactor / 256);
         //Generate tiles list by polygon bounds
         for(let x = startX; x < stopX; x++) {
           for(let y = startY; y < stopY; y++) {
@@ -367,16 +353,16 @@ class Geometry {
 
           }
         }
-        Log.make("success", "MAIN", `Calculation of tiles list is finished. Total ${arrJobTilesList.length} tiles.`);
+        Log.success("MAIN", `Calculation of tiles list is finished. Total ${arrJobTilesList.length} tiles.`);
         //Return tiles job list
         return arrJobTilesList;
       }
       else {
-        Log.make('warning', "MAIN", "Abort tiles calculation. Geometry type isnt Polygon.");
+        Log.warning("MAIN", "Abort tiles calculation. POI type isnt Polygon.");
         return false;
       }
     }
   }
 }
 
-module.exports = Geometry;
+module.exports = new POI();
