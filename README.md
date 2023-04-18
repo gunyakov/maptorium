@@ -34,6 +34,10 @@ If you have any problems during SQLite3 module compilation, run next command
 npm install https://github.com/mapbox/node-sqlite3/tarball/master
 ```
 
+#### Windows users
+
+Available v0.9.6-beta-win-x64 portable version for Windows users. You can download it [here](https://github.com/gunyakov/maptorium/releases/tag/0.9.6)
+
 ### Additional Info
 
 All tiles stored in sqlite3 DB. Storage aragement is fully compatible with [SAS Planet](https://sasgis.org)
@@ -57,7 +61,9 @@ Next futures to add:
 
 ### Version
 
-Very early version 0.9.5. Under heavy development
+Very early version 0.9.6. Under heavy development
+
+02.03.2023 - PM2 module romove from project.
 
 16.11.2022 - Polygons merge by Tuff.js
 
