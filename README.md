@@ -1,5 +1,7 @@
 # maptorium
 
+This repo is archive now. I will split this project into 3 parts: maptorium-server, maptorium-ui and maptorium-leaflet in future to prevent mixing of backend and frontend parts. Also this version have error to handle Sqlite DB properly. Wait for next update to get new version.
+
 ### Help me pls
 
 I'm looking for good html coder and who know leaflet library/how to write leaflet plugins very well to fully rewrite User UI and add a lot of futures inside. [Join Telegram Groupe to contribute or ask questions](https://t.me/maptorium)
